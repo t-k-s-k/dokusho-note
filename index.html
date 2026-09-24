@@ -203,7 +203,9 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .mhead{ display:flex; gap:12px; align-items:center; }
 .mtitle{ font-weight:700; font-size:17px; line-height:1.4; overflow-wrap:anywhere; }
 .msub{ color:var(--muted); font-size:13px; margin-top:2px; font-variant-numeric:tabular-nums; }
-.modal .field input[type=date]{ min-height:44px; background:var(--paper); }
+.modal .field input{ min-height:44px; background:var(--paper); }
+.infolist .taform{ font-size:16px; font-weight:400; }
+.taform .field:first-child{ margin-top:6px; }
 .mbtns{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px; }
 .mbtns.one{ grid-template-columns:1fr; }
 .modal.small{ max-width:360px; }
@@ -383,7 +385,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 const STORE_KEY = 'dokusho-note-v1';
 const PONYFILL_URL = 'https://fastly.jsdelivr.net/npm/barcode-detector@3.2.2/dist/es/ponyfill.min.js';
 // 国立国会図書館サーチの検索API（個人・非営利なら申請なしで無料で使える）
-const NDL_API = 'https://ndlsearch.ndl.go.jp/api/opensearch';
+const NDL_API = 'https://ndlsearch.ndl.go.jp/api/opensearch'; // キーワード検索用（OpenSearch）
+const NDL_SRU = 'https://ndlsearch.ndl.go.jp/api/sru';        // ISBN検索用（SRU）
 const STATUS = { reading: '読書中', want: '読みたい', done: '読了' };
 const STATUS_KEYS = ['reading', 'want', 'done'];
 const STATUS_NOTE = { reading: 'いま読んでいる本', want: 'これから読みたい本', done: '読み終わった本' };
@@ -591,14 +594,41 @@ function normalizeIsbn(input) {
 /* ========== 本の情報を探す（国立国会図書館サーチ） ========== */
 // 本の情報は国立国会図書館サーチだけから取る。openBD（データの改変禁止・本の紹介目的に限る）と
 // Google Books（ロゴとリンクの表示が必須・保存禁止）は、このアプリの使い方と利用規約が合わないため使わない
-async function fetchText(url, ms = 20000) { // 国立国会図書館サーチは数秒かかることがあるので長めに待つ
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function fetchText(url, ms = 20000) { // 国立国会図書館サーチは数秒〜十数秒かかることがあるので長めに待つ
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), ms);
   try {
     const r = await fetch(url, { signal: c.signal });
-    if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+    if (!r.ok) {
+      const e = new Error('HTTP ' + r.status);
+      e.status = r.status;
+      e.retryAfter = parseInt(r.headers.get('Retry-After'), 10) || 0;
+      throw e;
+    }
     return await r.text();
   } finally { clearTimeout(t); }
+}
+// 国立国会図書館サーチへの問い合わせは、同時に1件だけ、前の問い合わせから1秒以上あけて送る。
+// 混み合って断られた（429・503）ときだけ、少し待って2回まで送り直す（遅いだけのときは送り直さない）。
+// isStale を渡すと、順番待ちのあいだに不要になった問い合わせ（新しい検索をした等）は送らずにやめる
+let ndlChain = Promise.resolve(), ndlLastAt = 0;
+function ndlFetch(url, isStale) {
+  const run = async () => {
+    for (let attempt = 0; ; attempt++) {
+      const wait = ndlLastAt + 1000 - Date.now();
+      if (wait > 0) await sleep(wait);
+      if (isStale && isStale()) { const e = new Error('stale'); e.stale = true; throw e; }
+      try { return await fetchText(url); }
+      catch (e) {
+        if (!(e.status === 429 || e.status === 503) || attempt >= 2) throw e;
+        await sleep(e.retryAfter ? Math.min(e.retryAfter, 15) * 1000 : attempt ? 6000 : 3000);
+      } finally { ndlLastAt = Date.now(); }
+    }
+  };
+  const p = ndlChain.then(run, run);
+  ndlChain = p.catch(() => {});
+  return p;
 }
 
 // 国立国会図書館の書誌の書き方（「村上, 春樹, 1949-」「書名. 巻名」など）を、ふだんの表記に直す
@@ -659,41 +689,112 @@ function parseNdlItem(it) {
 // 検索対象は国立国会図書館自身のデータ（蔵書と新着書誌情報。どちらも CC BY 4.0）に絞る。
 // ほかの提供元のデータは利用条件がそれぞれ違うため含めない
 const NDL_DPID = 'iss-ndl-opac iss-ndl-opac-inprocess';
-async function ndlSearch(params, idx = 1, cnt = 30) {
+// キーワード検索は OpenSearch を使う（SRU は1冊あたりのデータが大きく、20件で1MB以上になるため）
+async function ndlSearch(params, idx = 1, cnt = 30, isStale) {
   const q = new URLSearchParams({ ...params, dpid: NDL_DPID, mediatype: 'books', cnt: String(cnt), idx: String(idx) });
-  const xml = new DOMParser().parseFromString(await fetchText(`${NDL_API}?${q}`), 'application/xml');
+  const xml = new DOMParser().parseFromString(await ndlFetch(`${NDL_API}?${q}`, isStale), 'application/xml');
   const total = parseInt(xml.getElementsByTagName('openSearch:totalResults')[0]?.textContent, 10) || 0;
   const seen = new Set();
   const items = [...xml.getElementsByTagName('item')].map(parseNdlItem)
     .filter(x => x && !seen.has(x.isbn) && seen.add(x.isbn));
   return { total, items };
 }
-// ISBNで本を探す。見つからなければ null、通信できないときや混み合っているときはエラーを投げる
-async function lookup(isbn) {
-  const { items } = await ndlSearch({ isbn }, 1, 5);
-  const x = items.find(i => i.isbn === isbn);
-  return x && x.title ? { ...x, totalPages: toPosInt(x.totalPages) } : null;
+
+// SRU（図書館の蔵書検索の標準の問い合わせ方）の結果1件（DC-NDL形式）を読む
+function parseDcndl(rec) {
+  const hasIsbn = b => [...b.children].some(c => c.tagName === 'dcterms:identifier' && /ISBN$/.test(c.getAttribute('rdf:datatype') || ''));
+  const bib = [...rec.getElementsByTagName('dcndl:BibResource')].find(hasIsbn);
+  if (!bib) return null;
+  const kids = name => [...bib.children].filter(c => c.tagName === name);
+  const text = el => (el ? el.textContent : '').trim();
+  const first = (el, name) => (el ? el.getElementsByTagName(name)[0] : null);
+  const value = el => text(first(el, 'rdf:value')) || text(el); // 「値」と「読み」に分かれているときは値だけ
+  let isbn = null;
+  for (const c of kids('dcterms:identifier')) {
+    if (/ISBN$/.test(c.getAttribute('rdf:datatype') || '') && (isbn = normalizeIsbn(c.textContent))) break;
+  }
+  if (!isbn) return null;
+  const titleEl = kids('dc:title')[0], volEl = kids('dcndl:volume')[0];
+  const vol = value(volEl);
+  const creators = kids('dcterms:creator');
+  // 構造化された著者がないときは「山田太郎 著」のような責任表示から名前だけを取る
+  const names = creators.length ? creators.map(c => text(first(c, 'foaf:name')))
+    : kids('dc:creator').map(c => text(c).split(/\s+/)[0]);
+  const pages = [...text(kids('dcterms:extent')[0]).matchAll(/(\d+)\s*[pP]/g)].map(m => Number(m[1]));
+  const tk = kanaKey(text(first(titleEl, 'dcndl:transcription')));
+  return {
+    isbn,
+    title: withVolume(cleanTitle(value(titleEl) || text(kids('dcterms:title')[0])), vol),
+    author: joinNames(names),
+    publisher: text(first(kids('dcterms:publisher')[0], 'foaf:name')),
+    pubdate: normDate(text(kids('dcterms:date')[0]) || text(kids('dcterms:issued')[0])),
+    totalPages: pages.length ? Math.max(...pages) : null,
+    titleKana: tk ? tk + (VOLCODE.test(vol) ? '' : vol) : '',
+    authorKana: kanaKey(text(first(creators[0], 'dcndl:transcription'))),
+  };
+}
+// ISBNで本を探す（SRU）。見つからなければ null、通信できないときや混み合っているときはエラーを投げる。
+// 計測では OpenSearch より断られにくかったので、ISBN の検索には SRU を使う
+async function lookupSRU(isbn) {
+  const q = new URLSearchParams({
+    operation: 'searchRetrieve', recordSchema: 'dcndl', recordPacking: 'xml', maximumRecords: '3',
+    query: `isbn="${isbn}" AND dpid="${NDL_DPID}"`,
+  });
+  const xml = new DOMParser().parseFromString(await ndlFetch(`${NDL_SRU}?${q}`), 'application/xml');
+  const recs = [...xml.getElementsByTagName('recordData')];
+  if (!recs.length && xml.getElementsByTagName('diagnostic').length) {
+    throw new Error('SRU: ' + (xml.getElementsByTagName('message')[0]?.textContent || 'error'));
+  }
+  for (const r of recs) {
+    const x = parseDcndl(r);
+    if (x && x.isbn === isbn && x.title) return { ...x, totalPages: toPosInt(x.totalPages) };
+  }
+  return null;
+}
+// 一度調べたISBNは、アプリを開いている間は覚えておき、同じ問い合わせを二度送らない
+// （問い合わせ中に同じISBNを読み取ったときも、その結果を待つ）。失敗したときは次にまた探せるよう忘れる
+const lookupCache = new Map();
+function lookup(isbn) {
+  if (!lookupCache.has(isbn)) {
+    const p = lookupSRU(isbn);
+    lookupCache.set(isbn, p);
+    p.catch(() => lookupCache.delete(isbn));
+  }
+  return lookupCache.get(isbn);
 }
 
 // 以前に追加した本で足りない情報（発売日・読み・ページ数・出版社）を、国立国会図書館サーチから補う。
 // タイトルと著者は、利用者が見慣れた表記のまま変えない。
-// 国立国会図書館サーチに負担をかけないよう、1回の起動で10冊まで、1冊ずつ間をあけて問い合わせる
+// 利用者の検索の邪魔をせず、国立国会図書館サーチに負担をかけないよう、
+// 起動から1分たってから、検索の画面を開いていないときだけ、1日5冊まで、1冊ずつ10秒あけて問い合わせる
+const BACKFILL_KEY = 'dokusho-backfill';
+const BACKFILL_PER_DAY = 5;
 let backfillStarted = false;
 async function backfillMeta() {
-  if (backfillStarted || !navigator.onLine) return;
+  if (backfillStarted || !navigator.onLine || !storageOK) return;
   backfillStarted = true;
+  const today = localDate();
+  let used = 0;
+  try { const d = JSON.parse(localStorage.getItem(BACKFILL_KEY) || '{}'); if (d.date === today) used = Number(d.n) || 0; } catch {}
   const now = Date.now();
   const targets = state.books.filter(b => /^\d{13}$/.test(b.isbn) && (!b.metaAt || now - b.metaAt > 30 * 864e5)
-    && (!b.pubdate || !b.titleKana || !b.totalPages || !b.publisher)).slice(0, 10);
+    && (!b.pubdate || !b.titleKana || !b.totalPages || !b.publisher)).slice(0, Math.max(0, BACKFILL_PER_DAY - used));
+  const busy = () => document.hidden || ['search', 'keyword', 'scan', 'manual', 'found'].includes(ui.page);
+  let changed = false;
   for (const b of targets) {
+    if (busy()) break; // 検索しているときはやめて、次に開いたときにまわす
     let info;
-    try { info = await lookup(b.isbn); } catch { return; } // 混み合っているときは次の起動にまわす
+    try { info = await lookup(b.isbn); } catch { break; } // 混み合っているときも次にまわす
+    used++;
+    try { localStorage.setItem(BACKFILL_KEY, JSON.stringify({ date: today, n: used })); } catch {}
     b.metaAt = Date.now();
-    if (info) for (const k of ['pubdate', 'titleKana', 'authorKana', 'publisher', 'totalPages']) if (!b[k] && info[k]) b[k] = info[k];
+    if (info) for (const k of ['pubdate', 'titleKana', 'authorKana', 'publisher', 'totalPages']) {
+      if (!b[k] && info[k]) { b[k] = info[k]; changed = true; }
+    }
     save();
-    await new Promise(r => setTimeout(r, 2000));
+    await sleep(10000);
   }
-  if (targets.length && !document.querySelector('.overlay, .menuov')) refresh();
+  if (changed && !document.querySelector('.overlay, .menuov')) refresh();
 }
 
 /* ========== 画面の切り替え（戻るボタン対応） ========== */
@@ -1002,7 +1103,7 @@ function openRecord(b) {
   });
 }
 
-// 本の情報（お気に入り・評価・タグ・総ページ数・読み終わった日）
+// 本の情報（タイトル・著者の修正、お気に入り・評価・タグ・総ページ数・読み終わった日）
 function openInfo(b) {
   openModal((m, ctx) => {
     let editing = null;
@@ -1025,6 +1126,14 @@ function openInfo(b) {
         ${others.length ? `<div class="chips wrap">${others.map(t => `<button type="button" class="chip add" data-addtag="${esc(t)}" aria-label="タグ「${esc(t)}」を付ける">＋ ${esc(t)}</button>`).join('')}</div>` : ''}
       </div>
       <dl class="infolist">
+        <div><dt>タイトル・著者</dt><dd>${editing === 'ta'
+          ? `<form id="taForm" class="taform" novalidate>
+              <label class="field"><span>タイトル（必須）</span><input name="title" value="${esc(b.title)}" maxlength="200" autocomplete="off"></label>
+              <label class="field"><span>著者</span><input name="author" value="${esc(b.author)}" maxlength="200" autocomplete="off"></label>
+              <p class="err" id="taErr" role="alert"></p>
+              <div class="mbtns"><button type="button" class="btn" id="taCancel">キャンセル</button><button class="btn primary">保存</button></div>
+            </form>`
+          : `<button type="button" class="linkbtn" id="taEdit">変更</button>`}</dd></div>
         <div><dt>状態</dt><dd>${STATUS[b.status]}</dd></div>
         <div><dt>アプリに追加した日</dt><dd>${fmtLong(tsDate(b.createdAt))}</dd></div>
         ${b.pubdate ? `<div><dt>発売日</dt><dd>${pubLabel(b.pubdate)}</dd></div>` : ''}
@@ -1063,6 +1172,22 @@ function openInfo(b) {
         b.tags.push(...new Set(add));
         if (changed()) draw('#tagForm input');
       });
+      const taEdit = $('#taEdit');
+      if (taEdit) taEdit.onclick = () => { editing = 'ta'; draw('input[name=title]'); };
+      const taf = $('#taForm');
+      if (taf) {
+        $('#taCancel').onclick = () => { editing = null; draw('#taEdit'); };
+        onSubmit(taf, () => {
+          const title = taf.elements.title.value.trim(), author = taf.elements.author.value.trim();
+          if (!title) { $('#taErr').textContent = 'タイトルを入力してください。'; taf.elements.title.focus(); return; }
+          // 並び替え用の読みは元の表記のものなので、書き換えたら消す（読みがないときは表記で並べる）
+          if (title !== b.title) { b.title = title; b.titleKana = ''; }
+          if (author !== b.author) { b.author = author; b.authorKana = ''; }
+          editing = null;
+          if (changed()) toast('タイトルと著者を保存しました');
+          draw('#taEdit');
+        });
+      }
       const tpEdit = $('#tpEdit');
       if (tpEdit) tpEdit.onclick = () => { editing = 'tp'; draw('input[name=tp]'); };
       const tf = $('#tpForm');
@@ -1327,6 +1452,8 @@ function drawKeywordResults() {
   const more = document.getElementById('kwMore');
   if (more) more.onclick = () => runKeyword(true);
 }
+// 同じ言葉・同じページの検索結果は、アプリを開いている間は覚えておき、問い合わせを送らない
+const kwCache = new Map();
 async function runKeyword(more) {
   const k = ui.kw;
   if (!more) { k.items = []; k.idx = 1; k.hasMore = false; window.scrollTo(0, 0); }
@@ -1335,7 +1462,15 @@ async function runKeyword(more) {
   const my = ++k.seq;
   drawKeywordResults();
   try {
-    const { total, items } = await ndlSearch({ [k.field === 'author' ? 'creator' : 'title']: k.q }, k.idx, 30);
+    const key = [k.field, k.q, k.idx].join('\n');
+    let res = kwCache.get(key);
+    if (!res) {
+      // 順番待ちの間に新しい検索をしたら、この問い合わせは送らない
+      res = await ndlSearch({ [k.field === 'author' ? 'creator' : 'title']: k.q }, k.idx, 30, () => my !== k.seq);
+      kwCache.set(key, res);
+      if (kwCache.size > 30) kwCache.delete(kwCache.keys().next().value);
+    }
+    const { total, items } = res;
     if (my !== k.seq) return;
     const seen = new Set(k.items.map(x => x.isbn));
     items.forEach(x => { if (!seen.has(x.isbn)) { seen.add(x.isbn); k.items.push(x); } });
@@ -1344,7 +1479,8 @@ async function runKeyword(more) {
   } catch (e) {
     if (my !== k.seq) return;
     k.error = navigator.onLine === false ? 'オフラインのため検索できません。通信できる場所でもう一度お試しください。'
-      : e && e.status === 429 ? '検索が混み合っています。少し待ってからもう一度お試しください。'
+      : e && e.status === 429 ? '国立国会図書館サーチが混み合っています。少し待ってからもう一度お試しください。'
+      : e && e.name === 'AbortError' ? '国立国会図書館サーチからの返事が遅いため、検索をあきらめました。少し待ってからもう一度お試しください。'
       : '検索できませんでした。少し待ってからもう一度お試しください。';
   }
   k.searched = true;
@@ -1542,7 +1678,7 @@ async function renderFound(isbnParam) {
     const notice = navigator.onLine === false
       ? 'オフラインのため本の情報を取得できませんでした。タイトルなどを入力して追加できます。'
       : failed
-        ? `本の情報を取得できませんでした${failed.status === 429 ? '（検索が混み合っています）' : ''}。少し待ってからもう一度探すか、タイトルなどを入力して追加できます。`
+        ? `本の情報を取得できませんでした${failed.status === 429 || failed.status === 503 ? '（国立国会図書館サーチが混み合っています）' : failed.name === 'AbortError' ? '（国立国会図書館サーチからの返事が遅いため）' : ''}。少し待ってからもう一度探すか、タイトルなどを入力して追加できます。`
         : 'この本の情報が見つかりませんでした。発売されたばかりの本は、国立国会図書館のデータに載るまで時間がかかることがあります。タイトルなどを入力して追加できます。';
     paint(pageBar('', '#/search') + `<section class="pad"><p class="notice">${esc(notice)}</p>
       ${failed ? '<button type="button" class="btn block" id="retry" style="margin:0 0 8px">もう一度探す</button>' : ''}${manualFormHtml({})}</section>`);
@@ -2060,7 +2196,7 @@ histCall('replaceState', { d: curDepth(), h: ui.hash }, ui.hash);
 save();
 try { route(); }
 catch (e) { app.innerHTML = `<section class="pad"><p class="h1">起動できませんでした</p><p class="help">${esc(e && e.message)}</p></section>`; }
-setTimeout(() => backfillMeta().catch(() => {}), 1500);
+setTimeout(() => backfillMeta().catch(() => {}), 60000); // 起動直後の検索とぶつからないよう1分待つ
 </script>
 </body>
 </html>
