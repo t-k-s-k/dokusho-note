@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#F3F5F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151C23" media="(prefers-color-scheme: dark)">
+<title>読書ノート</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --paper:#F3F5F4; --surface:#FFFFFF; --ink:#1F2A36; --muted:#5F6D79; --rule:#D5DEE3;
+  --stamp:#5E4A9B; --danger:#B3261E; --sun:#B83A3A; --sat:#2F5E9E; --hl:#ECE8F6;
+  /* 日本語はスマホ標準のフォントで表示（Claudeのアプリと同じ見え方） */
+  --font:system-ui,-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Noto Sans CJK JP","Yu Gothic UI",Meiryo,sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --paper:#151C23; --surface:#1D2630; --ink:#E3E9ED; --muted:#9CAAB5; --rule:#2F3C48; --stamp:#B9A6EE; --danger:#F4A79F; --sun:#F29A9A; --sat:#95B8F2; --hl:#2B2942; }
+}
+*,*::before,*::after{ box-sizing:border-box; }
+html{ -webkit-text-size-adjust:100%; }
+body{ margin:0; background:var(--paper); color:var(--ink); font:16px/1.6 var(--font); -webkit-tap-highlight-color:transparent; }
+body.scanning{ background:#000; }
+body.modal-open{ overflow:hidden; }
+#app{ max-width:560px; margin:0 auto; min-height:100vh; padding-top:env(safe-area-inset-top,0px); padding-bottom:calc(96px + env(safe-area-inset-bottom,0px)); }
+p{ margin:0; }
+button,input{ font:inherit; color:inherit; }
+button{ cursor:pointer; }
+:focus-visible{ outline:3px solid var(--stamp); outline-offset:2px; border-radius:6px; }
+.sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+svg.i{ width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; display:block; }
+
+/* ホーム */
+.top{ display:flex; align-items:center; gap:12px; padding:14px 10px 6px 20px; min-height:62px; }
+.brand{ font-weight:700; font-size:24px; letter-spacing:.02em; margin:0; }
+.today{ margin-left:auto; color:var(--muted); font-size:13.5px; white-space:nowrap; }
+.today b{ color:var(--ink); font-size:17px; margin:0 2px; font-variant-numeric:tabular-nums; }
+.selbtn{ background:none; border:0; color:var(--stamp); font-weight:700; font-size:15px; padding:10px; border-radius:8px; }
+.selcount{ margin-left:auto; margin-right:10px; font-weight:700; font-size:15px; }
+.tabs{ display:flex; border-bottom:1px solid var(--rule); padding:0 12px; position:sticky; top:0; background:var(--paper); z-index:2; }
+.tabs button{ flex:1; background:none; border:0; padding:12px 4px 11px; color:var(--muted); font-size:15px; border-radius:0; }
+.tabs button[aria-selected="true"]{ color:var(--ink); font-weight:700; box-shadow:inset 0 -2px 0 var(--stamp); }
+.count{ font-size:12px; margin-left:4px; font-variant-numeric:tabular-nums; }
+.shelf{ list-style:none; margin:0; padding:0; }
+.shelf li{ position:relative; }
+.shelf li + li{ border-top:1px solid var(--rule); }
+.rowbtn{ display:flex; gap:14px; width:100%; padding:14px 52px 14px 20px; background:none; border:0; text-align:left; align-items:flex-start; border-radius:0; }
+.rowbtn:active{ background:var(--surface); }
+.selecting .rowbtn{ padding-right:20px; }
+.shelf li.sel .rowbtn{ background:var(--hl); }
+.info{ position:absolute; top:8px; right:6px; width:44px; height:44px; display:grid; place-items:center; background:none; border:0; color:var(--muted); border-radius:50%; }
+.info .i{ width:22px; height:22px; }
+.check{ flex:none; width:24px; height:24px; border-radius:50%; border:2px solid var(--rule); align-self:center; display:grid; place-items:center; color:transparent; }
+.check .i{ width:16px; height:16px; stroke-width:3; }
+.sel .check{ background:var(--stamp); border-color:var(--stamp); color:var(--surface); }
+.rowbody{ display:block; flex:1; min-width:0; }
+.title{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-weight:700; font-size:16.5px; line-height:1.45; }
+.author{ display:block; color:var(--muted); font-size:13.5px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tag{ display:inline-block; font-size:12px; color:var(--stamp); border:1px solid currentColor; border-radius:4px; padding:0 6px; margin-top:6px; }
+.prog{ display:block; margin-top:8px; }
+.bar{ display:block; height:4px; background:var(--rule); border-radius:2px; overflow:hidden; }
+.bar i{ display:block; height:100%; background:var(--ink); border-radius:2px; }
+.progtext{ display:flex; flex-wrap:wrap; gap:0 12px; font-size:12.5px; color:var(--muted); margin-top:5px; font-variant-numeric:tabular-nums; }
+.empty{ padding:48px 24px; }
+.empty p{ color:var(--muted); }
+.empty .etitle{ font-size:19px; font-weight:700; color:var(--ink); margin-bottom:8px; }
+.datalinkwrap{ padding:28px 20px 8px; text-align:center; }
+.datalink{ color:var(--muted); font-size:13.5px; }
+
+/* 下のバー */
+.nav{ position:fixed; left:0; right:0; bottom:0; z-index:5; background:var(--surface); border-top:1px solid var(--rule); padding-bottom:env(safe-area-inset-bottom,0px); }
+.nav .in{ max-width:560px; margin:0 auto; display:grid; grid-template-columns:repeat(3,1fr); }
+.nav button{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 0 10px; background:none; border:0; color:var(--muted); font-size:11.5px; border-radius:0; }
+.nav .ic{ display:grid; place-items:center; width:60px; height:30px; border-radius:15px; }
+.nav button[aria-current="page"]{ color:var(--ink); font-weight:700; }
+.nav button[aria-current="page"] .ic{ background:var(--hl); }
+.nav button[aria-current="page"] .i{ stroke-width:2.2; }
+.selbar{ position:fixed; left:0; right:0; bottom:0; z-index:6; background:var(--surface); border-top:1px solid var(--rule); padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px)); }
+.selbar .in{ max-width:560px; margin:0 auto; display:grid; gap:8px; }
+.selbar.c2 .in{ grid-template-columns:1fr 1fr; }
+.selbar.c3 .in{ grid-template-columns:repeat(6,1fr); }
+.selbar.c3 .mv{ grid-column:span 2; }
+.selbar.c3 .ft{ grid-column:span 3; }
+.selbar .btn{ min-height:44px; font-size:14px; padding:0 6px; }
+
+/* ボタン・入力 */
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 18px; border-radius:12px; border:1.5px solid var(--ink); background:transparent; color:var(--ink); font-size:15px; font-weight:700; text-decoration:none; text-align:center; line-height:1.3; }
+.btn.primary{ background:var(--ink); color:var(--paper); }
+.btn.block{ display:flex; width:100%; margin-top:16px; }
+.btn.danger{ color:var(--danger); border-color:var(--danger); }
+.btn.light{ border-color:rgba(255,255,255,.85); color:#fff; background:rgba(0,0,0,.25); }
+.btn:disabled{ opacity:.35; cursor:default; }
+.btn:not(:disabled):active{ transform:translateY(1px); }
+.linkbtn{ background:none; border:0; padding:0 2px; color:var(--stamp); text-decoration:underline; font-size:inherit; }
+.field{ display:block; margin-top:14px; }
+.field > span{ display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+.field input, .inline input{ width:100%; min-height:48px; padding:10px 12px; border:1.5px solid var(--rule); border-radius:10px; background:var(--surface); font-size:16px; }
+input:focus{ border-color:var(--ink); outline:none; }
+input:focus-visible{ outline:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--stamp) 30%, transparent); }
+.inline{ display:flex; gap:8px; }
+.inline input{ flex:1; min-width:0; }
+.inline .btn{ flex:none; }
+.seg{ border:0; padding:0; margin:16px 0 0; min-width:0; }
+.seg legend{ font-size:13px; color:var(--muted); margin-bottom:6px; padding:0; }
+.seg .opts{ display:grid; grid-auto-flow:column; grid-auto-columns:1fr; background:var(--paper); border:1.5px solid var(--rule); border-radius:12px; padding:3px; gap:3px; }
+.seg label{ position:relative; display:block; }
+.seg input{ position:absolute; inset:0; width:100%; height:100%; opacity:0; margin:0; cursor:pointer; }
+.seg span{ display:block; text-align:center; padding:9px 4px; border-radius:9px; font-size:14.5px; color:var(--muted); }
+.seg input:checked + span{ background:var(--ink); color:var(--paper); font-weight:700; }
+.seg input:focus-visible + span{ outline:3px solid var(--stamp); outline-offset:1px; }
+.numrow{ display:flex; align-items:baseline; gap:10px; margin-top:14px; }
+.numrow input{ flex:1; min-width:0; min-height:60px; padding:6px 12px; border:1.5px solid var(--rule); border-radius:10px; background:var(--paper); font-size:32px; font-weight:700; font-variant-numeric:tabular-nums; }
+input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button{ -webkit-appearance:none; margin:0; }
+.unit{ flex:none; color:var(--muted); font-size:15px; }
+.hint{ font-size:13.5px; color:var(--muted); margin-top:8px; min-height:1.6em; }
+.hint.bad{ color:var(--danger); }
+
+/* 表紙 */
+.cover{ flex:none; display:block; object-fit:cover; background:var(--rule); border-radius:2px 5px 5px 2px; box-shadow:0 1px 2px rgba(15,25,35,.22), inset 3px 0 0 rgba(0,0,0,.14); }
+.cover.xs{ width:36px; height:52px; }
+.cover.sm{ width:48px; height:70px; }
+.cover.lg{ width:128px; height:186px; box-shadow:0 6px 18px rgba(15,25,35,.22), inset 4px 0 0 rgba(0,0,0,.14); }
+.ph{ background:var(--c); color:#F5F2EA; writing-mode:vertical-rl; overflow:hidden; line-height:1.3; letter-spacing:.06em; font-weight:700; }
+.ph span{ display:block; max-height:100%; overflow:hidden; }
+.cover.xs.ph{ font-size:8px; padding:4px 3px; }
+.cover.sm.ph{ font-size:10px; padding:5px 4px 5px 3px; }
+.cover.lg.ph{ font-size:17px; padding:14px 10px 14px 8px; }
+
+/* ページ共通 */
+.pagebar{ display:flex; align-items:center; gap:4px; padding:8px 8px 0; min-height:52px; }
+.back{ display:inline-flex; align-items:center; gap:2px; background:none; border:0; padding:10px 12px 10px 8px; font-size:15px; color:var(--ink); }
+.back .i{ width:20px; height:20px; }
+.pbtitle{ font-weight:700; font-size:15px; }
+.pagehead{ padding:20px 20px 4px; }
+.pagehead h1{ margin:0; font-size:22px; font-weight:700; }
+.pad{ padding:8px 20px 16px; }
+.h1{ font-size:20px; font-weight:700; line-height:1.4; margin:8px 0 12px; }
+.help{ color:var(--muted); font-size:13.5px; margin-top:8px; }
+.notice{ background:var(--surface); border-left:3px solid var(--stamp); padding:10px 12px; font-size:14px; margin:4px 0 12px; border-radius:0 8px 8px 0; }
+.err{ color:var(--danger); font-size:13.5px; margin-top:6px; }
+.err:empty{ display:none; }
+.loading{ color:var(--muted); padding:40px 0; text-align:center; }
+.divider{ color:var(--muted); font-size:13.5px; margin:24px 0 0; padding-top:16px; border-top:1px solid var(--rule); }
+.prose p + p{ margin-top:10px; }
+.filebtn{ cursor:pointer; }
+
+/* 検索 */
+.bigopt{ display:flex; gap:16px; align-items:center; width:100%; padding:18px; background:var(--surface); border:1.5px solid var(--rule); border-radius:16px; text-align:left; margin-top:12px; }
+.bigopt .i{ width:34px; height:34px; stroke-width:1.6; }
+.bigopt b{ display:block; font-size:17px; }
+.bigopt span span{ display:block; color:var(--muted); font-size:13.5px; margin-top:2px; }
+
+/* 見つかった本 */
+.confirm{ display:flex; flex-direction:column; align-items:center; text-align:center; padding:20px 24px; }
+.confirm .cover{ margin-bottom:20px; }
+.ctitle{ font-size:20px; font-weight:700; line-height:1.45; overflow-wrap:anywhere; }
+.cauthor{ color:var(--muted); font-size:14px; margin-top:4px; }
+.cq{ margin-top:22px; font-size:15px; }
+.cbtns{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; margin-top:12px; }
+.mini{ display:flex; gap:12px; align-items:center; padding:8px 0 4px; }
+.mini p{ font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
+.statusopts{ display:grid; gap:10px; margin-top:4px; }
+.statusopt{ display:block; width:100%; padding:14px 18px; border:1.5px solid var(--rule); border-radius:14px; background:var(--surface); text-align:left; }
+.statusopt b{ display:block; font-size:17px; }
+.statusopt span{ display:block; font-size:13px; color:var(--muted); }
+
+/* ダイアログ */
+.overlay{ position:fixed; inset:0; z-index:30; background:rgba(10,16,22,.45); display:flex; padding:16px; overflow-y:auto; animation:fade .15s ease-out; }
+.modal{ margin:auto; width:100%; max-width:420px; min-width:0; background:var(--surface); border-radius:20px; padding:20px; box-shadow:0 12px 40px rgba(0,0,0,.25); animation:pop .18s ease-out; }
+@keyframes fade{ from{ opacity:0; } }
+@keyframes pop{ from{ opacity:0; transform:scale(.96); } }
+.mhead{ display:flex; gap:12px; align-items:center; }
+.mtitle{ font-weight:700; font-size:17px; line-height:1.4; overflow-wrap:anywhere; }
+.msub{ color:var(--muted); font-size:13px; margin-top:2px; font-variant-numeric:tabular-nums; }
+.modal .field input[type=date]{ min-height:44px; background:var(--paper); }
+.mbtns{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px; }
+.mbtns.one{ grid-template-columns:1fr; }
+.modal.small{ max-width:360px; }
+.cfmsg{ font-size:15.5px; line-height:1.7; }
+.btn.dangerfill{ background:var(--danger); border-color:var(--danger); color:var(--surface); }
+.notice.pv{ margin:0 16px 10px; }
+.lastlog{ font-size:13px; color:var(--muted); margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-variant-numeric:tabular-nums; }
+.infolist{ margin:18px 0 0; }
+.infolist div{ padding:12px 0; border-top:1px solid var(--rule); }
+.infolist dt{ font-size:13px; color:var(--muted); }
+.infolist dd{ margin:2px 0 0; font-size:17px; font-weight:700; }
+.infolist .inline{ margin-top:6px; font-weight:400; }
+
+/* 記録（グラフ・カレンダー） */
+.viewseg{ display:grid; grid-template-columns:1fr 1fr; gap:3px; margin:12px 20px 0; padding:3px; background:var(--surface); border:1.5px solid var(--rule); border-radius:12px; }
+.viewseg button{ display:flex; align-items:center; justify-content:center; gap:6px; padding:8px; background:none; border:0; border-radius:9px; color:var(--muted); font-size:14.5px; }
+.viewseg button[aria-selected="true"]{ background:var(--ink); color:var(--paper); font-weight:700; }
+.viewseg .i{ width:20px; height:20px; }
+.weekhead{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:18px 20px 0; }
+.wlabel{ font-weight:700; font-size:16px; }
+.wtotal{ color:var(--muted); font-size:13.5px; white-space:nowrap; }
+.wtotal b{ color:var(--ink); font-size:17px; margin:0 2px; font-variant-numeric:tabular-nums; }
+.chartwrap{ display:grid; grid-template-columns:36px 1fr 36px; align-items:center; padding:6px 2px 0; }
+.arrow{ width:36px; height:64px; display:grid; place-items:center; background:none; border:0; color:var(--ink); border-radius:10px; padding:0; }
+.arrow:disabled{ color:var(--rule); cursor:default; }
+.arrow .i{ width:26px; height:26px; stroke-width:2.2; }
+.chart svg{ display:block; width:100%; height:auto; overflow:visible; }
+.chart .grid{ stroke:var(--rule); stroke-width:1; }
+.chart .grid.base{ stroke:var(--muted); }
+.chart text{ fill:var(--muted); font-size:11px; font-family:var(--font); }
+.chart .tot{ fill:var(--ink); font-weight:700; font-size:11.5px; }
+.chart .wdl{ font-size:12.5px; fill:var(--ink); }
+.chart .wdl.sun{ fill:var(--sun); }
+.chart .wdl.sat{ fill:var(--sat); }
+.chart .now{ font-weight:700; }
+.chart .dtl.now{ fill:var(--ink); }
+.chart .nowbg{ fill:var(--hl); }
+.chart .hit{ fill:transparent; cursor:pointer; }
+.chart .segr{ stroke:var(--surface); stroke-width:1.5; cursor:pointer; }
+.chart .segr.dim{ opacity:.28; }
+.chart .segr.on{ stroke:var(--ink); stroke-width:2; }
+.daypanel{ margin:14px 16px 0; padding:14px 16px; background:var(--surface); border:1px solid var(--rule); border-radius:14px; }
+.dayhead{ display:flex; justify-content:space-between; gap:10px; font-weight:700; font-size:15px; }
+.dayhead span{ color:var(--muted); font-weight:400; font-size:13.5px; white-space:nowrap; }
+.daylist{ list-style:none; margin:8px 0 0; padding:0; }
+.daylist li{ display:flex; align-items:center; gap:10px; padding:6px 8px; margin:0 -8px; font-size:14.5px; border-radius:8px; }
+.daylist li.hl{ font-weight:700; background:var(--hl); }
+.sw{ width:12px; height:12px; border-radius:3px; flex:none; }
+.daylist .bt{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.daylist .pg{ margin-left:auto; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.daypanel .help{ margin-top:0; }
+.cal{ padding:14px 12px 0; }
+.calhead{ display:grid; grid-template-columns:36px 1fr 36px; align-items:center; }
+.calhead p{ text-align:center; font-weight:700; font-size:17px; }
+.calhead .arrow{ height:44px; }
+.calgrid{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; margin-top:6px; }
+.wd{ text-align:center; font-size:12px; color:var(--muted); padding:2px 0; }
+.wd.sun{ color:var(--sun); } .wd.sat{ color:var(--sat); }
+.cell{ aspect-ratio:1/1.12; background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:3px 2px; display:flex; flex-direction:column; align-items:center; min-width:0; }
+.cell .dn{ font-size:11.5px; line-height:1.2; align-self:flex-start; padding-left:3px; }
+.cell.sun .dn{ color:var(--sun); } .cell.sat .dn{ color:var(--sat); }
+.cell.today{ border:2px solid var(--ink); }
+.cell.today .dn{ font-weight:700; }
+.cell.future{ opacity:.4; cursor:default; }
+.cell.blank{ background:none; border-color:transparent; }
+.cell.picked{ background:var(--hl); }
+.mstamp{ margin-top:auto; margin-bottom:auto; width:min(36px, 88%); aspect-ratio:1; border-radius:50%; border:1.5px solid var(--stamp); box-shadow:inset 0 0 0 1.5px var(--surface), inset 0 0 0 2.5px var(--stamp); color:var(--stamp); display:grid; place-items:center; font-size:12px; font-weight:700; transform:rotate(var(--r)); font-variant-numeric:tabular-nums; letter-spacing:-.04em; }
+.cell.picked .mstamp{ box-shadow:inset 0 0 0 1.5px var(--hl), inset 0 0 0 2.5px var(--stamp); }
+.msum{ color:var(--muted); font-size:13.5px; margin:12px 8px 0; }
+.msum b{ color:var(--ink); }
+
+/* 読み取り */
+.scan{ position:fixed; inset:0; background:#000; z-index:10; }
+.scan video{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.frame{ position:absolute; left:8%; right:8%; top:28%; height:20%; border:2px solid rgba(255,255,255,.9); border-radius:14px; box-shadow:0 0 0 100vmax rgba(0,0,0,.5); }
+.scanpanel{ position:absolute; left:0; right:0; bottom:0; padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px)); color:#fff; }
+.scanmsg{ font-size:15px; line-height:1.6; margin:0 auto 16px; max-width:520px; text-align:center; }
+.scanbtns{ display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:520px; margin:0 auto; }
+
+.toast{ position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,8px); background:var(--ink); color:var(--paper); padding:10px 16px; border-radius:12px; font-size:14px; max-width:calc(100% - 32px); width:max-content; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:40; }
+.toast.show{ opacity:1; transform:translate(-50%,0); }
+@media (prefers-reduced-motion: reduce){
+  .overlay, .modal{ animation:none; }
+  .toast{ transition:none; }
+}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+/* ========== 設定 ========== */
+const STORE_KEY = 'dokusho-note-v1';
+const PONYFILL_URL = 'https://fastly.jsdelivr.net/npm/barcode-detector@3.2.2/dist/es/ponyfill.min.js';
+const STATUS = { reading: '読書中', want: '読みたい', done: '読了' };
+const STATUS_KEYS = ['reading', 'want', 'done'];
+const STATUS_NOTE = { reading: 'いま読んでいる本', want: 'これから読みたい本', done: '読み終わった本' };
+const WD = '日月火水木金土';
+const COLORS = ['#5E4A9B', '#2F7A6B', '#C0833A', '#3E6FA8', '#A2475E', '#6B8E3A', '#7A5C3E', '#4A5A70'];
+
+const svg = inner => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`;
+const ICON = {
+  home: svg('<path d="M3.5 10.5L12 3.5l8.5 7"/><path d="M5.5 9v11h5v-6h3v6h5V9"/>'),
+  search: svg('<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/>'),
+  cal: svg('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
+  bars: svg('<path d="M3.5 20.5h17"/><rect x="5.5" y="11" width="3" height="7"/><rect x="10.5" y="5" width="3" height="13"/><rect x="15.5" y="13.5" width="3" height="4.5"/>'),
+  info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.2" stroke-width="2.4"/>'),
+  check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+  back: svg('<path d="M15 18l-6-6 6-6"/>'),
+  prev: svg('<path d="M15 18l-6-6 6-6"/>'),
+  next: svg('<path d="M9 18l6-6-6-6"/>'),
+  barcode: svg('<path d="M4 5v14M7 5v14M10.5 5v14M13 5v14M16.5 5v14M20 5v14" stroke-width="1.6"/><path d="M8.7 5v14M18.2 5v14" stroke-width="0.9"/>'),
+  pencil: svg('<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 7.5l3 3"/>'),
+};
+
+const app = document.getElementById('app');
+const ui = {
+  tab: 'reading', page: 'home', selecting: false, selected: new Set(),
+  statsView: 'bar', weekStart: null, month: null, barPick: null, calPick: null,
+  renderToken: 0, renderedHash: '', afterPop: null, hash: '#/',
+};
+let scanner = null, scanSession = 0, detectorPromise = null;
+let storageOK = true;
+try { localStorage.setItem('__dokusho_test', '1'); localStorage.removeItem('__dokusho_test'); } catch { storageOK = false; }
+let state = loadState();
+ensureColors();
+
+/* ========== 小さな道具 ========== */
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function toPosInt(v) { const n = parseInt(v, 10); return n > 0 ? n : null; }
+function safeUrl(u) { return (typeof u === 'string' && /^https:\/\//.test(u)) ? u : ''; }
+function hashNum(s) { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); }
+// 日本時間の「今日」を正しく出すため、toISOString（UTC）は使わない
+function localDate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function parseLocal(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d || 1); }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function startOfWeek(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x; }
+function fmtMD(ds) {
+  const d = parseLocal(ds);
+  const md = `${d.getMonth() + 1}/${d.getDate()}`;
+  return d.getFullYear() === new Date().getFullYear() ? md : `${d.getFullYear()}/${md}`;
+}
+function fmtLong(ds) { const d = parseLocal(ds); return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）`; }
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+/* ========== 保存 ========== */
+function emptyState() { return { version: 1, settings: { mode: 'pages' }, books: [] }; }
+function normalizeState(d) {
+  if (!d || !Array.isArray(d.books)) throw new Error('invalid data');
+  const s = emptyState();
+  if (d.settings && (d.settings.mode === 'pages' || d.settings.mode === 'end')) s.settings.mode = d.settings.mode;
+  s.books = d.books.filter(b => b && typeof b.title === 'string').map(b => ({
+    id: String(b.id || uid()),
+    isbn: typeof b.isbn === 'string' ? b.isbn : '',
+    title: b.title,
+    author: typeof b.author === 'string' ? b.author : '',
+    publisher: typeof b.publisher === 'string' ? b.publisher : '',
+    cover: safeUrl(b.cover),
+    totalPages: toPosInt(b.totalPages),
+    status: STATUS_KEYS.includes(b.status) ? b.status : 'reading',
+    colorIdx: Number.isInteger(b.colorIdx) && b.colorIdx >= 0 && b.colorIdx < COLORS.length ? b.colorIdx : null,
+    createdAt: Number(b.createdAt) || Date.now(),
+    updatedAt: Number(b.updatedAt) || Date.now(),
+    finishedAt: Number(b.finishedAt) || null,
+    logs: (Array.isArray(b.logs) ? b.logs : [])
+      .filter(l => l && /^\d{4}-\d{2}-\d{2}$/.test(l.date))
+      .map(l => ({
+        id: String(l.id || uid()), date: l.date,
+        start: Math.max(0, parseInt(l.start, 10) || 0),
+        end: Math.max(0, parseInt(l.end, 10) || 0),
+        pages: Math.max(0, parseInt(l.pages, 10) || 0),
+        createdAt: Number(l.createdAt) || 0,
+      })),
+  }));
+  return s;
+}
+function loadState() {
+  if (!storageOK) return emptyState();
+  let raw = null;
+  try { raw = localStorage.getItem(STORE_KEY); } catch { return emptyState(); }
+  if (!raw) return emptyState();
+  try { return normalizeState(JSON.parse(raw)); }
+  catch {
+    // 壊れたデータを上書きで失わないよう、別の場所に退避しておく
+    try { localStorage.setItem(STORE_KEY + '-broken-' + Date.now(), raw); } catch {}
+    return emptyState();
+  }
+}
+function save() {
+  if (!storageOK) return true; // 保存できない環境では、開いている間だけ覚えておく
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; }
+  catch { toast('保存できませんでした。端末の空き容量を確認してください'); return false; }
+}
+// 本ごとの色（グラフと代わりの表紙で共通）。なるべく重ならないように割り当てる
+function colorCounts() {
+  const used = new Array(COLORS.length).fill(0);
+  state.books.forEach(b => { if (b.colorIdx != null) used[b.colorIdx]++; });
+  return used;
+}
+function pickColor(used) { let best = 0; for (let i = 1; i < used.length; i++) if (used[i] < used[best]) best = i; return best; }
+function ensureColors() {
+  const used = colorCounts();
+  [...state.books].sort((a, b) => a.createdAt - b.createdAt).forEach(b => {
+    if (b.colorIdx == null) { b.colorIdx = pickColor(used); used[b.colorIdx]++; }
+  });
+}
+function colorOf(b) { return COLORS[b.colorIdx != null ? b.colorIdx : hashNum(b.title || '') % COLORS.length]; }
+
+/* ========== ISBN ========== */
+function isValid13(s) {
+  if (!/^\d{13}$/.test(s)) return false;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(s[i]) * (i % 2 ? 3 : 1);
+  return (10 - (sum % 10)) % 10 === Number(s[12]);
+}
+// 本のISBNは978か979で始まる（下段の192…は分類・価格のコード）
+function isBookIsbn13(s) { return /^97[89]/.test(s) && isValid13(s); }
+function isValid10(s) {
+  if (!/^\d{9}[\dX]$/.test(s)) return false;
+  let sum = 0;
+  for (let i = 0; i < 10; i++) sum += (s[i] === 'X' ? 10 : Number(s[i])) * (10 - i);
+  return sum % 11 === 0;
+}
+function isbn10to13(s) {
+  const core = '978' + s.slice(0, 9);
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(core[i]) * (i % 2 ? 3 : 1);
+  return core + ((10 - (sum % 10)) % 10);
+}
+function normalizeIsbn(input) {
+  const s = String(input || '').toUpperCase().replace(/[^0-9X]/g, '');
+  if (s.length === 13 && isBookIsbn13(s)) return s;
+  if (s.length === 10 && isValid10(s)) return isbn10to13(s);
+  return null;
+}
+
+/* ========== 本の情報を探す（openBD → Google Books） ========== */
+async function fetchJson(url, ms = 8000) {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: c.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+async function fromOpenBD(isbn) {
+  const data = await fetchJson(`https://api.openbd.jp/v1/get?isbn=${isbn}`);
+  const rec = Array.isArray(data) ? data[0] : null;
+  if (!rec || !rec.summary) return null;
+  const s = rec.summary;
+  let pages = null;
+  const ext = rec.onix?.DescriptiveDetail?.Extent;
+  if (Array.isArray(ext)) {
+    for (const e of ext) {
+      const v = parseInt(e?.ExtentValue, 10);
+      if (v > 0 && (!e.ExtentUnit || e.ExtentUnit === '03')) { pages = v; break; }
+    }
+  }
+  let title = (s.title || '').trim();
+  if (s.volume && !title.includes(s.volume)) title += ' ' + s.volume;
+  return {
+    title,
+    author: (s.author || '').replace(/／著/g, '').replace(/\s+/g, ' ').trim(),
+    publisher: s.publisher || '',
+    cover: s.cover || '',
+    totalPages: pages,
+  };
+}
+async function fromGoogle(isbn) {
+  const data = await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+  const v = data?.items?.[0]?.volumeInfo;
+  if (!v) return null;
+  const cover = (v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '').replace(/^http:/, 'https:');
+  return {
+    title: [v.title, v.subtitle].filter(Boolean).join(' '),
+    author: (v.authors || []).join('、'),
+    publisher: v.publisher || '',
+    cover,
+    totalPages: v.pageCount > 0 ? v.pageCount : null,
+  };
+}
+async function lookup(isbn) {
+  let a = null, b = null;
+  try { a = await fromOpenBD(isbn); } catch {}
+  // openBDで見つからない、またはページ数や表紙がないときはGoogle Booksで補う
+  if (!a || !a.totalPages || !a.cover) { try { b = await fromGoogle(isbn); } catch {} }
+  if (!a && !b) return null;
+  const filled = a ? Object.fromEntries(Object.entries(a).filter(([, v]) => v)) : {};
+  const r = { ...(b || {}), ...filled };
+  if (!r.title) return null;
+  return { title: r.title, author: r.author || '', publisher: r.publisher || '', cover: safeUrl(r.cover), totalPages: r.totalPages || null };
+}
+
+/* ========== 画面の切り替え（戻るボタン対応） ========== */
+const layers = [];
+let layerSeq = 0;
+// Claudeのプレビュー画面など、URLを書き換えられない環境でも動くようにする
+function histCall(method, st, hash) {
+  try { history[method](st, '', hash); return true; } catch {}
+  try { history[method](st, ''); return true; } catch {}
+  return false;
+}
+function curDepth() { const st = history.state; return (st && typeof st.d === 'number') ? st.d : 0; }
+function nav(hash) { histCall('pushState', { d: curDepth() + 1, h: hash }, hash); ui.hash = hash; route(); }
+function navReplace(hash) { histCall('replaceState', { d: curDepth(), h: hash }, hash); ui.hash = hash; route(); }
+function goBack(fallback = '#/') { if (curDepth() > 0) history.back(); else navReplace(fallback); }
+// 本を追加し終えたら、途中の画面を履歴から消してホームへ戻る
+function backTo(hash) {
+  const d = curDepth();
+  if (d > 0) { ui.afterPop = hash; history.go(-d); } else navReplace(hash);
+}
+// ダイアログや選択モードは「戻る」で閉じられるよう、履歴に1つ積む
+function pushLayer(close) {
+  const id = ++layerSeq;
+  layers.push({ id, close });
+  histCall('pushState', { d: curDepth() + 1, layer: id, h: ui.hash }, ui.hash);
+  return id;
+}
+function popLayer() {
+  if (!layers.length) return;
+  const st = history.state;
+  if (st && st.layer === layers[layers.length - 1].id) history.back();
+  else layers.pop().close(); // 履歴に積めなかったときは直接閉じる
+}
+window.addEventListener('popstate', () => {
+  const st = history.state || {};
+  while (layers.length && layers[layers.length - 1].id !== st.layer) layers.pop().close();
+  if (ui.afterPop) { const h = ui.afterPop; ui.afterPop = null; return navReplace(h); }
+  const h = st.h || location.hash || '#/';
+  if (h !== ui.renderedHash) { ui.hash = h; route(); }
+});
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[data-nav]');
+  if (a) { e.preventDefault(); nav(a.getAttribute('href')); return; }
+  const t = e.target.closest('[data-tabnav]');
+  if (t) {
+    const h = t.dataset.tabnav;
+    if (h === '#/stats') { ui.barPick = null; ui.calPick = null; }
+    if (ui.hash !== h) navReplace(h);
+  }
+});
+function route() {
+  ui.renderToken++;
+  const h = ui.hash || '#/';
+  ui.renderedHash = h;
+  const raw = h.slice(1) || '/';
+  const qi = raw.indexOf('?');
+  const path = qi >= 0 ? raw.slice(0, qi) : raw;
+  const params = new URLSearchParams(qi >= 0 ? raw.slice(qi + 1) : '');
+  if (path !== '/scan') stopScanner();
+  document.body.classList.toggle('scanning', path === '/scan');
+  window.scrollTo(0, 0);
+  if (path === '/search') return renderSearch();
+  if (path === '/scan') return renderScan();
+  if (path === '/manual') return renderManual();
+  if (path === '/found') return renderFound(params.get('isbn'));
+  if (path === '/stats') return renderStats();
+  if (path === '/data') return renderData();
+  return renderHome();
+}
+
+/* ========== 画面の部品 ========== */
+function progressOf(b) { return b.logs.reduce((m, l) => Math.max(m, l.end), 0); }
+function lastDate(b) { return b.logs.reduce((m, l) => (l.date > m ? l.date : m), ''); }
+function lastCreated(b) { return b.logs.reduce((m, l) => (!m || l.createdAt > m.createdAt ? l : m), null); }
+function todayPages() {
+  const t = localDate();
+  let s = 0;
+  for (const b of state.books) for (const l of b.logs) if (l.date === t) s += l.pages;
+  return s;
+}
+function placeholderHtml(title, color, size) {
+  return `<span class="cover ${size} ph" style="--c:${color}" aria-hidden="true"><span>${esc(title)}</span></span>`;
+}
+function coverHtml(b, size) {
+  const color = colorOf(b);
+  if (b.cover) return `<img class="cover ${size}" src="${esc(b.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-title="${esc(b.title)}" data-color="${color}">`;
+  return placeholderHtml(b.title || '', color, size);
+}
+// 表紙画像が読み込めないときは、背表紙風の代わりの表紙にする
+function wireCovers(root) {
+  root.querySelectorAll('img.cover').forEach(img => {
+    const swap = () => {
+      const size = ['lg', 'sm', 'xs'].find(s => img.classList.contains(s)) || 'sm';
+      img.outerHTML = placeholderHtml(img.dataset.title, img.dataset.color, size);
+    };
+    if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) swap();
+    else img.addEventListener('error', swap, { once: true });
+  });
+}
+function pageBar(title, fallback = '#/') {
+  return `<header class="pagebar"><button type="button" class="back" id="back" data-fallback="${esc(fallback)}">${ICON.back}戻る</button>${title ? `<p class="pbtitle">${esc(title)}</p>` : ''}</header>`;
+}
+function navHtml(active) {
+  const items = [['home', '#/', 'ホーム', ICON.home], ['search', '#/search', '検索', ICON.search], ['stats', '#/stats', 'カレンダー', ICON.cal]];
+  return `<nav class="nav" aria-label="メニュー"><div class="in">${items.map(([k, h, l, ic]) =>
+    `<button type="button" data-tabnav="${h}" ${k === active ? 'aria-current="page"' : ''}><span class="ic">${ic}</span>${l}</button>`).join('')}</div></nav>`;
+}
+function paint(html) {
+  app.innerHTML = html;
+  wireCovers(app);
+  const back = document.getElementById('back');
+  if (back) back.onclick = () => goBack(back.dataset.fallback || '#/');
+}
+function progressHtml(b) {
+  if (b.status === 'want' && !b.logs.length) return '';
+  if (!b.logs.length && !b.totalPages) return '';
+  const p = progressOf(b), t = b.totalPages;
+  const pct = t ? Math.min(100, Math.round((p / t) * 100)) : null;
+  const last = lastDate(b);
+  return `<span class="prog">${pct != null ? `<span class="bar"><i style="width:${pct}%"></i></span>` : ''}
+    <span class="progtext"><span>${t ? `${p} / ${t}ページ` : `${p}ページ目まで`}</span>${last ? `<span>最後に読んだ日 ${fmtMD(last)}</span>` : ''}</span></span>`;
+}
+
+
+// フォームの送信（プレビュー画面では送信イベントが止められるため、ボタンのクリックでも受け付ける）
+function onSubmit(form, handler) {
+  let busy = false;
+  const run = async e => {
+    if (e) e.preventDefault();
+    if (busy) return;
+    busy = true;
+    try { await handler(); } finally { busy = false; }
+  };
+  form.addEventListener('submit', run);
+  form.querySelectorAll('button:not([type="button"])').forEach(b => b.addEventListener('click', run));
+}
+
+/* ========== ダイアログ ========== */
+function openModal(build) {
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"></div>';
+  document.body.appendChild(ov);
+  document.body.classList.add('modal-open');
+  const m = ov.firstChild;
+  const ctx = { changed: false };
+  ov.addEventListener('click', e => { if (e.target === ov) popLayer(); });
+  ov.addEventListener('keydown', e => { if (e.key === 'Escape') popLayer(); });
+  pushLayer(() => {
+    ov.remove();
+    if (!document.querySelector('.overlay')) document.body.classList.remove('modal-open');
+    if (ctx.changed && ui.page === 'home') renderHome();
+  });
+  build(m, ctx);
+  return ctx;
+}
+
+
+// 確認用の小さなダイアログ（ブラウザ標準のconfirmはプレビュー画面で使えないため）
+function askConfirm(message, okLabel = 'OK', danger = false) {
+  return new Promise(resolve => {
+    let result = false;
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+    ov.innerHTML = `<div class="modal small" role="alertdialog" aria-modal="true" aria-labelledby="cfMsg">
+      <p id="cfMsg" class="cfmsg">${esc(message)}</p>
+      <div class="mbtns"><button type="button" class="btn" data-cf="0">キャンセル</button><button type="button" class="btn ${danger ? 'dangerfill' : 'primary'}" data-cf="1">${esc(okLabel)}</button></div></div>`;
+    document.body.appendChild(ov);
+    document.body.classList.add('modal-open');
+    pushLayer(() => {
+      ov.remove();
+      if (!document.querySelector('.overlay')) document.body.classList.remove('modal-open');
+      resolve(result);
+    });
+    ov.addEventListener('click', e => {
+      const b = e.target.closest('[data-cf]');
+      if (b) { result = b.dataset.cf === '1'; popLayer(); }
+      else if (e.target === ov) popLayer();
+    });
+    ov.addEventListener('keydown', e => { if (e.key === 'Escape') popLayer(); });
+    setTimeout(() => ov.querySelector('[data-cf="1"]').focus(), 30);
+  });
+}
+
+// 読書の記録（画面の中央に表示）
+function openRecord(b) {
+  openModal((m, ctx) => {
+    const draw = () => {
+      const prog = progressOf(b);
+      const today = localDate();
+      const last = lastCreated(b);
+      const mode = state.settings.mode;
+      m.innerHTML = `
+      <div class="mhead">${coverHtml(b, 'xs')}<div><p class="mtitle" id="mTitle">${esc(b.title)}</p>
+        <p class="msub">${b.totalPages ? `${prog} / ${b.totalPages}ページ` : `${prog}ページ目まで`}</p></div></div>
+      <form id="logForm" novalidate>
+        <label class="field"><span>日付</span><input type="date" name="date" value="${today}" max="${today}"></label>
+        <fieldset class="seg"><legend>記録のしかた</legend><div class="opts">
+          <label><input type="radio" name="mode" value="pages" ${mode === 'pages' ? 'checked' : ''}><span>読んだページ数</span></label>
+          <label><input type="radio" name="mode" value="end" ${mode === 'end' ? 'checked' : ''}><span>何ページ目まで</span></label>
+        </div></fieldset>
+        <div class="numrow">
+          <input name="n" type="number" inputmode="numeric" min="1" placeholder="0" aria-label="ページ" aria-describedby="hint">
+          <span class="unit" id="unit"></span>
+        </div>
+        <p class="hint" id="hint" aria-live="polite"></p>
+        ${b.status === 'want' ? '<p class="help">記録すると「読書中」に移動します。</p>' : ''}
+        ${last ? `<p class="lastlog">前回の記録：${fmtMD(last.date)}　${last.pages}ページ<button type="button" class="linkbtn" id="undo">取り消す</button></p>` : ''}
+        <div class="mbtns"><button type="button" class="btn" id="mCancel">キャンセル</button><button class="btn primary">記録する</button></div>
+      </form>`;
+      wireCovers(m);
+      const form = m.querySelector('#logForm');
+      const f = form.elements;
+      const unit = m.querySelector('#unit'), hint = m.querySelector('#hint');
+      const update = () => {
+        const md = f.mode.value;
+        const n = parseInt(f.n.value, 10);
+        unit.textContent = md === 'pages' ? 'ページ' : 'ページ目まで';
+        hint.classList.remove('bad');
+        if (!(n > 0)) {
+          hint.textContent = prog ? `今は${prog}ページ目まで読んでいます` : 'はじめての記録です';
+        } else if (md === 'pages') {
+          const end = prog + n;
+          if (b.totalPages && end > b.totalPages) { hint.textContent = `総ページ数（${b.totalPages}ページ）を超えています`; hint.classList.add('bad'); }
+          else hint.textContent = `${end}ページ目まで読んだことになります`;
+        } else if (n > prog) {
+          if (b.totalPages && n > b.totalPages) { hint.textContent = `総ページ数（${b.totalPages}ページ）を超えています`; hint.classList.add('bad'); }
+          else hint.textContent = `${n - prog}ページ読んだことになります`;
+        } else {
+          hint.textContent = `今の記録は${prog}ページ目までです。それより後のページを入れてください`;
+          hint.classList.add('bad');
+        }
+      };
+      form.addEventListener('input', update);
+      form.addEventListener('change', e => {
+        if (e.target.name === 'mode') { state.settings.mode = f.mode.value; save(); }
+        update();
+      });
+      update();
+      m.querySelector('#mCancel').onclick = () => popLayer();
+      const undo = m.querySelector('#undo');
+      if (undo) undo.onclick = async () => {
+        if (!(await askConfirm(`${fmtMD(last.date)}の記録（${last.pages}ページ）を取り消しますか？`, '取り消す', true))) return;
+        b.logs = b.logs.filter(x => x !== last);
+        b.updatedAt = Date.now();
+        if (save()) { ctx.changed = true; toast('記録を取り消しました'); draw(); }
+      };
+      onSubmit(form, async () => {
+        const md = f.mode.value;
+        const n = parseInt(f.n.value, 10);
+        const date = f.date.value || today;
+        if (!(n > 0)) { hint.textContent = 'ページ数を入れてください'; hint.classList.add('bad'); f.n.focus(); return; }
+        if (date > today) { hint.textContent = 'これから先の日付には記録できません'; hint.classList.add('bad'); return; }
+        let end, pages;
+        if (md === 'pages') { pages = n; end = prog + n; }
+        else {
+          if (n <= prog) { update(); f.n.focus(); return; }
+          end = n; pages = n - prog;
+        }
+        if (b.totalPages && end > b.totalPages) {
+          if (!(await askConfirm(`総ページ数（${b.totalPages}ページ）を超えています。総ページ数を${end}ページに直して記録しますか？`, '直して記録する'))) return;
+          b.totalPages = end;
+        }
+        b.logs.push({ id: uid(), date, start: prog, end, pages, createdAt: Date.now() });
+        let msg = '記録しました';
+        if (b.status === 'want') { b.status = 'reading'; msg = '記録して「読書中」に移動しました'; }
+        if (b.totalPages && end >= b.totalPages && b.status !== 'done') {
+          b.status = 'done'; b.finishedAt = Date.now();
+          msg = '最後まで読んだので「読了」に移動しました';
+        }
+        b.updatedAt = Date.now();
+        if (!save()) return;
+        ctx.changed = true;
+        toast(msg);
+        popLayer();
+      });
+      setTimeout(() => f.n.focus(), 50);
+    };
+    draw();
+  });
+}
+
+// 本の情報（アプリに追加した日）
+function openInfo(b) {
+  openModal((m, ctx) => {
+    const draw = editing => {
+      m.innerHTML = `
+      <div class="mhead">${coverHtml(b, 'xs')}<div><p class="mtitle" id="mTitle">${esc(b.title)}</p>${b.author ? `<p class="msub">${esc(b.author)}</p>` : ''}</div></div>
+      <dl class="infolist">
+        <div><dt>アプリに追加した日</dt><dd>${fmtLong(localDate(new Date(b.createdAt)))}</dd></div>
+        <div><dt>総ページ数</dt><dd>${editing
+          ? `<form class="inline" id="tpForm" novalidate><input name="tp" type="number" inputmode="numeric" min="1" value="${b.totalPages || ''}" aria-label="総ページ数"><button class="btn primary">保存</button></form>`
+          : `${b.totalPages ? b.totalPages + 'ページ' : 'まだ入力していません'} <button type="button" class="linkbtn" id="tpEdit">変更</button>`}</dd></div>
+      </dl>
+      <div class="mbtns one"><button type="button" class="btn" id="mClose">閉じる</button></div>`;
+      wireCovers(m);
+      m.querySelector('#mClose').onclick = () => popLayer();
+      const ed = m.querySelector('#tpEdit');
+      if (ed) ed.onclick = () => { draw(true); m.querySelector('input[name=tp]').focus(); };
+      const tf = m.querySelector('#tpForm');
+      if (tf) onSubmit(tf, () => {
+        b.totalPages = toPosInt(tf.elements.tp.value);
+        b.updatedAt = Date.now();
+        if (save()) { ctx.changed = true; toast('総ページ数を保存しました'); draw(false); }
+      });
+    };
+    draw(false);
+    setTimeout(() => m.querySelector('#mClose').focus(), 50);
+  });
+}
+
+/* ========== ホーム ========== */
+function renderHome() {
+  ui.page = 'home';
+  const sel = ui.selecting;
+  const counts = { reading: 0, want: 0, done: 0, all: state.books.length };
+  state.books.forEach(b => counts[b.status]++);
+  const tabs = [['reading', '読書中'], ['want', '読みたい'], ['done', '読了'], ['all', 'すべて']];
+  const list = state.books
+    .filter(b => ui.tab === 'all' || b.status === ui.tab)
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  let body;
+  if (!state.books.length) {
+    body = `<div class="empty"><p class="etitle">本棚はまだ空です</p><p>下の「検索」から、バーコードやISBNで本を追加できます。</p></div>`;
+  } else if (!list.length) {
+    body = `<div class="empty"><p>「${ui.tab === 'all' ? 'すべて' : STATUS[ui.tab]}」の本はありません。</p></div>`;
+  } else {
+    body = `<ul class="shelf${sel ? ' selecting' : ''}">${list.map(b => {
+      const on = sel && ui.selected.has(b.id);
+      return `<li class="${on ? 'sel' : ''}">
+        <button type="button" class="rowbtn" data-book="${esc(b.id)}" ${sel ? `aria-pressed="${on}"` : ''}>
+          ${sel ? `<span class="check">${ICON.check}</span>` : ''}${coverHtml(b, 'sm')}
+          <span class="rowbody"><span class="title">${esc(b.title)}</span>${b.author ? `<span class="author">${esc(b.author)}</span>` : ''}
+          ${ui.tab === 'all' ? `<span class="tag">${STATUS[b.status]}</span>` : ''}${progressHtml(b)}</span>
+        </button>
+        ${sel ? '' : `<button type="button" class="info" data-info="${esc(b.id)}" aria-label="「${esc(b.title)}」の情報">${ICON.info}</button>`}
+      </li>`;
+    }).join('')}</ul>`;
+  }
+  const header = sel
+    ? `<header class="top"><h1 class="brand">読書ノート</h1><p class="selcount" aria-live="polite">${ui.selected.size}冊を選択中</p></header>`
+    : `<header class="top"><h1 class="brand">読書ノート</h1><p class="today">今日<b>${todayPages()}</b>ページ</p>${state.books.length ? '<button type="button" class="selbtn" id="selBtn">選択</button>' : ''}</header>`;
+  let bottom;
+  if (sel) {
+    const targets = STATUS_KEYS.filter(k => ui.tab === 'all' || k !== ui.tab);
+    const none = ui.selected.size === 0 ? 'disabled' : '';
+    bottom = `<div class="selbar ${targets.length === 3 ? 'c3' : 'c2'}"><div class="in">
+      ${targets.map(k => `<button type="button" class="btn primary mv" data-move="${k}" ${none}>${STATUS[k]}に移動</button>`).join('')}
+      <button type="button" class="btn danger ft" id="selDel" ${none}>削除</button>
+      <button type="button" class="btn ft" id="selBack">戻る</button>
+    </div></div>`;
+  } else {
+    bottom = `<p class="datalinkwrap"><a class="datalink" href="#/data" data-nav>データの書き出し・読み込み</a></p>` + navHtml('home');
+  }
+  const pv = storageOK ? '' : '<p class="notice pv">この画面では記録は保存されません。GitHub Pagesに置いたURLで開くと保存されます。</p>';
+  paint(header + pv + `<nav class="tabs" role="tablist" aria-label="本の状態">${tabs.map(([k, l]) =>
+    `<button type="button" role="tab" aria-selected="${ui.tab === k}" data-tab="${k}">${l}<span class="count">${counts[k]}</span></button>`).join('')}</nav>` + body + bottom);
+
+  app.querySelectorAll('[data-tab]').forEach(el => el.onclick = () => {
+    ui.tab = el.dataset.tab;
+    if (sel) ui.selected.clear();
+    renderHome();
+  });
+  const selBtn = document.getElementById('selBtn');
+  if (selBtn) selBtn.onclick = () => {
+    ui.selecting = true; ui.selected = new Set();
+    pushLayer(() => { ui.selecting = false; ui.selected.clear(); if (ui.page === 'home') renderHome(); });
+    renderHome();
+  };
+  app.querySelectorAll('[data-book]').forEach(el => el.onclick = () => {
+    const b = state.books.find(x => x.id === el.dataset.book);
+    if (!b) return;
+    if (sel) {
+      if (ui.selected.has(b.id)) ui.selected.delete(b.id); else ui.selected.add(b.id);
+      renderHome();
+      const again = app.querySelector(`[data-book="${CSS.escape(b.id)}"]`);
+      if (again) again.focus();
+      return;
+    }
+    if (b.status === 'done') openInfo(b); else openRecord(b);
+  });
+  app.querySelectorAll('[data-info]').forEach(el => el.onclick = () => {
+    const b = state.books.find(x => x.id === el.dataset.info);
+    if (b) openInfo(b);
+  });
+  if (sel) {
+    app.querySelectorAll('[data-move]').forEach(el => el.onclick = () => {
+      const k = el.dataset.move;
+      const now = Date.now();
+      let n = 0;
+      state.books.forEach(b => {
+        if (!ui.selected.has(b.id)) return;
+        if (b.status !== k) { b.status = k; n++; }
+        if (k === 'done' && !b.finishedAt) b.finishedAt = now;
+        b.updatedAt = now;
+      });
+      if (save()) toast(`${ui.selected.size}冊を「${STATUS[k]}」に移動しました`);
+      popLayer();
+    });
+    document.getElementById('selDel').onclick = async () => {
+      const n = ui.selected.size;
+      if (!(await askConfirm(`選んだ${n}冊と、その記録をすべて削除しますか？`, '削除する', true))) return;
+      state.books = state.books.filter(b => !ui.selected.has(b.id));
+      if (save()) toast(`${n}冊を削除しました`);
+      popLayer();
+    };
+    document.getElementById('selBack').onclick = () => popLayer();
+  }
+}
+
+/* ========== 検索 ========== */
+function renderSearch() {
+  ui.page = 'search';
+  paint(`<header class="pagehead"><h1>本を探す</h1></header>
+  <section class="pad">
+    <button type="button" class="bigopt" id="goScan">${ICON.barcode}<span><b>バーコードで検索</b><span>本の裏にある、978から始まるバーコードを読み取ります</span></span></button>
+    <button type="button" class="bigopt" id="goManual">${ICON.pencil}<span><b>ISBN・手入力</b><span>ISBNの番号で探すか、タイトルなどを入力して追加します</span></span></button>
+  </section>` + navHtml('search'));
+  document.getElementById('goScan').onclick = () => nav('#/scan');
+  document.getElementById('goManual').onclick = () => nav('#/manual');
+}
+
+/* ========== バーコード読み取り ========== */
+function getDetector() {
+  if (!detectorPromise) {
+    detectorPromise = (async () => {
+      // Androidのブラウザには読み取り機能が標準で入っていることが多いので、まずそれを使う
+      if ('BarcodeDetector' in window) {
+        try {
+          const formats = await window.BarcodeDetector.getSupportedFormats();
+          if (formats.includes('ean_13')) return new window.BarcodeDetector({ formats: ['ean_13'] });
+        } catch {}
+      }
+      const mod = await import(PONYFILL_URL);
+      return new mod.BarcodeDetector({ formats: ['ean_13'] });
+    })().catch(e => { detectorPromise = null; throw e; });
+  }
+  return detectorPromise;
+}
+function cameraErrorText(e) {
+  if (!window.isSecureContext) return 'カメラはHTTPSで公開したページでしか使えません。GitHub PagesのURLから開いてください。';
+  const n = e && e.name;
+  if (n === 'NotAllowedError' || n === 'SecurityError') return 'カメラの使用が許可されていません。アドレスバー左のアイコンからカメラを許可して、もう一度開いてください。';
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return '使えるカメラが見つかりません。ISBNを入力して追加してください。';
+  if (n === 'NotReadableError') return 'カメラを起動できませんでした。ほかのアプリがカメラを使っていないか確認してください。';
+  return 'カメラを起動できませんでした。ISBNを入力して追加できます。';
+}
+function stopScanner() {
+  scanSession++;
+  if (scanner) {
+    clearTimeout(scanner.timer);
+    scanner.stream.getTracks().forEach(t => t.stop());
+    scanner = null;
+  }
+}
+async function startScanner() {
+  stopScanner();
+  const my = ++scanSession;
+  const msg = document.getElementById('scanMsg');
+  const video = document.getElementById('video');
+  if (!navigator.mediaDevices?.getUserMedia) { msg.textContent = cameraErrorText(); return; }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    });
+  } catch (e) {
+    if (my === scanSession) msg.textContent = cameraErrorText(e);
+    return;
+  }
+  if (my !== scanSession) { stream.getTracks().forEach(t => t.stop()); return; }
+  scanner = { stream, timer: null };
+  video.srcObject = stream;
+  try { await video.play(); } catch {}
+  try {
+    const track = stream.getVideoTracks()[0];
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.focusMode && caps.focusMode.includes('continuous')) await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+  } catch {}
+  msg.textContent = '読み取りの準備をしています…';
+  let detector;
+  try { detector = await getDetector(); }
+  catch {
+    if (my === scanSession) msg.textContent = '読み取り機能を読み込めませんでした。通信状態を確認するか、ISBNを入力して追加してください。';
+    return;
+  }
+  if (my !== scanSession) return;
+  const guide = '978から始まる上段のバーコードを枠に合わせてください';
+  msg.textContent = guide;
+  let last = null, hits = 0, lowerTimer = null;
+  const tick = async () => {
+    if (my !== scanSession) return;
+    if (video.readyState >= 2) {
+      try {
+        const codes = await detector.detect(video);
+        if (my !== scanSession) return;
+        let found = null, sawLower = false;
+        for (const c of codes) {
+          const v = String(c.rawValue || '').trim();
+          if (isBookIsbn13(v)) { found = v; break; }
+          if (/^19[12]\d{10}$/.test(v)) sawLower = true;
+        }
+        if (found) {
+          // 読み間違いを防ぐため、同じ番号が2回続けて読めたら確定
+          hits = found === last ? hits + 1 : 1;
+          last = found;
+          if (hits >= 2) { onScanned(found); return; }
+        } else if (sawLower) {
+          msg.textContent = 'それは下段のバーコードです。上段の978から始まる方を読み取ってください';
+          clearTimeout(lowerTimer);
+          lowerTimer = setTimeout(() => { if (my === scanSession) msg.textContent = guide; }, 2500);
+        }
+      } catch {}
+    }
+    if (scanner && my === scanSession) scanner.timer = setTimeout(tick, 120);
+  };
+  tick();
+}
+function onScanned(isbn) {
+  if (navigator.vibrate) navigator.vibrate(60);
+  stopScanner();
+  navReplace('#/found?isbn=' + isbn);
+}
+function renderScan() {
+  ui.page = 'scan';
+  paint(`
+  <section class="scan" aria-label="バーコード読み取り">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="frame" aria-hidden="true"></div>
+    <div class="scanpanel">
+      <p id="scanMsg" class="scanmsg" aria-live="polite">カメラを起動しています…</p>
+      <div class="scanbtns">
+        <button type="button" class="btn light" id="cancelScan">やめる</button>
+        <button type="button" class="btn light" id="toManual">ISBNを入力</button>
+      </div>
+    </div>
+  </section>`);
+  document.getElementById('cancelScan').onclick = () => { stopScanner(); goBack('#/search'); };
+  document.getElementById('toManual').onclick = () => { stopScanner(); navReplace('#/manual'); };
+  startScanner();
+}
+
+/* ========== ISBN・手入力 ========== */
+function renderManual() {
+  ui.page = 'manual';
+  paint(pageBar('ISBN・手入力', '#/search') + `
+  <section class="pad">
+    <form id="isbnForm" novalidate>
+      <label class="field"><span>ISBNで探す</span>
+        <span class="inline"><input name="isbn" inputmode="numeric" autocomplete="off" placeholder="978から始まる13桁" aria-describedby="isbnHelp"><button class="btn primary">探す</button></span>
+      </label>
+      <p id="isbnHelp" class="help">ISBNは裏表紙のバーコードの上や、本の最後のページ（奥付）に書いてあります。10桁のISBNでも探せます。</p>
+      <p class="err" id="isbnErr" role="alert"></p>
+    </form>
+    <p class="divider">ISBNがない本は、タイトルなどを入力して追加できます。</p>
+    ${manualFormHtml({})}
+  </section>`);
+  const isbnForm = document.getElementById('isbnForm');
+  onSubmit(isbnForm, () => {
+    const v = normalizeIsbn(isbnForm.elements.isbn.value);
+    if (!v) { document.getElementById('isbnErr').textContent = 'ISBNの形が正しくありません。978か979から始まる13桁か、10桁で入力してください。'; return; }
+    navReplace('#/found?isbn=' + v);
+  });
+  wireManualForm({});
+}
+function manualFormHtml(d) {
+  return `<form id="bookForm" novalidate>
+    <label class="field"><span>タイトル（必須）</span><input name="title" value="${esc(d.title || '')}"></label>
+    <label class="field"><span>著者</span><input name="author" value="${esc(d.author || '')}"></label>
+    <label class="field"><span>総ページ数</span><input name="totalPages" type="number" inputmode="numeric" min="1" value="${d.totalPages || ''}" placeholder="わかれば入力"></label>
+    <p class="err" id="bookErr" role="alert"></p>
+    <button class="btn primary block">次へ</button>
+  </form>`;
+}
+function wireManualForm(d) {
+  const form = document.getElementById('bookForm');
+  onSubmit(form, () => {
+    const f = form.elements;
+    const title = f.title.value.trim();
+    if (!title) { document.getElementById('bookErr').textContent = 'タイトルを入力してください。'; f.title.focus(); return; }
+    renderStatusStep({ ...d, title, author: f.author.value.trim(), totalPages: toPosInt(f.totalPages.value), manual: true });
+  });
+}
+
+/* ========== 見つかった本の確認と追加 ========== */
+async function renderFound(isbnParam) {
+  ui.page = 'found';
+  const token = ui.renderToken;
+  const isbn = normalizeIsbn(isbnParam);
+  if (!isbn) return navReplace('#/manual');
+  const dup = state.books.find(b => b.isbn === isbn);
+  if (dup) {
+    paint(pageBar('', '#/search') + `<section class="confirm">
+      ${coverHtml(dup, 'lg')}<p class="ctitle">${esc(dup.title)}</p>
+      <p class="cq">この本はもう「${STATUS[dup.status]}」に入っています。</p>
+      <div class="cbtns"><button type="button" class="btn" id="cCancel">キャンセル</button><button type="button" class="btn primary" id="cOk">OK</button></div>
+    </section>`);
+    document.getElementById('cCancel').onclick = () => goBack('#/search');
+    document.getElementById('cOk').onclick = () => { ui.tab = dup.status; backTo('#/'); };
+    return;
+  }
+  paint(pageBar('', '#/search') + `<section class="pad"><p class="loading" aria-live="polite">ISBN ${isbn} の本を探しています…</p></section>`);
+  const info = await lookup(isbn);
+  if (token !== ui.renderToken) return; // 探している間に別の画面へ移った
+  if (!info) {
+    const notice = navigator.onLine === false
+      ? 'オフラインのため本の情報を取得できませんでした。タイトルなどを入力して追加できます。'
+      : 'この本の情報が見つかりませんでした。タイトルなどを入力して追加できます。';
+    paint(pageBar('', '#/search') + `<section class="pad"><p class="notice">${esc(notice)}</p>${manualFormHtml({})}</section>`);
+    wireManualForm({ isbn });
+    return;
+  }
+  const d = { isbn, ...info };
+  paint(pageBar('', '#/search') + `<section class="confirm">
+    ${coverHtml(d, 'lg')}
+    <p class="ctitle">${esc(d.title)}</p>
+    ${d.author ? `<p class="cauthor">${esc(d.author)}</p>` : ''}
+    <p class="cq">この本でよろしいですか？</p>
+    <div class="cbtns"><button type="button" class="btn" id="cCancel">キャンセル</button><button type="button" class="btn primary" id="cOk">OK</button></div>
+  </section>`);
+  document.getElementById('cCancel').onclick = () => goBack('#/search');
+  document.getElementById('cOk').onclick = () => renderStatusStep(d);
+}
+function renderStatusStep(d) {
+  const askPages = !d.totalPages && !d.manual;
+  paint(pageBar('', '#/search') + `<section class="pad">
+    <div class="mini">${coverHtml(d, 'xs')}<p>${esc(d.title)}</p></div>
+    <h1 class="h1">どこに追加しますか？</h1>
+    ${askPages ? `<label class="field" style="margin:0 0 14px"><span>総ページ数（わかれば入力。あとからでも入力できます）</span><input name="tp" id="tp" type="number" inputmode="numeric" min="1" placeholder="例：240"></label>` : ''}
+    <div class="statusopts">${STATUS_KEYS.map(k => `<button type="button" class="statusopt" data-status="${k}"><b>${STATUS[k]}</b><span>${STATUS_NOTE[k]}</span></button>`).join('')}</div>
+    <button type="button" class="btn block" id="sCancel">キャンセル</button>
+  </section>`);
+  document.getElementById('sCancel').onclick = () => goBack('#/search');
+  app.querySelectorAll('[data-status]').forEach(el => el.onclick = () => {
+    const tp = document.getElementById('tp');
+    addBook({ ...d, totalPages: d.totalPages || (tp ? toPosInt(tp.value) : null) }, el.dataset.status);
+  });
+}
+function addBook(d, status) {
+  const now = Date.now();
+  const b = {
+    id: uid(), isbn: d.isbn || '', title: d.title, author: d.author || '', publisher: d.publisher || '',
+    cover: safeUrl(d.cover), totalPages: toPosInt(d.totalPages), status,
+    colorIdx: pickColor(colorCounts()),
+    createdAt: now, updatedAt: now, finishedAt: status === 'done' ? now : null, logs: [],
+  };
+  state.books.push(b);
+  if (!save()) return;
+  ui.tab = status;
+  toast(`「${STATUS[status]}」に追加しました`);
+  backTo('#/');
+}
+
+/* ========== 記録（グラフ・カレンダー） ========== */
+function buildDayMap() {
+  const map = new Map();
+  for (const b of state.books) for (const l of b.logs) {
+    if (!l.pages) continue;
+    let day = map.get(l.date);
+    if (!day) { day = new Map(); map.set(l.date, day); }
+    day.set(b.id, (day.get(b.id) || 0) + l.pages);
+  }
+  return map;
+}
+function niceScale(v) {
+  v = Math.max(v, 10);
+  const raw = v / 4;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const n = raw / mag;
+  const step = Math.max(1, (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag);
+  return { max: Math.ceil(v / step) * step, step };
+}
+function dayPanelHtml(ds, pickBook, dm, emptyText) {
+  if (!ds) return `<div class="daypanel"><p class="help">${emptyText}</p></div>`;
+  const m = dm.get(ds);
+  if (!m) return `<div class="daypanel" aria-live="polite"><p class="dayhead">${fmtLong(ds)}</p><p class="help" style="margin-top:6px">この日の記録はありません。</p></div>`;
+  const items = [...m.entries()].map(([id, p]) => ({ b: state.books.find(x => x.id === id), p })).filter(x => x.b).sort((a, b) => b.p - a.p);
+  const total = items.reduce((s, x) => s + x.p, 0);
+  return `<div class="daypanel" aria-live="polite"><p class="dayhead">${fmtLong(ds)}<span>合計${total}ページ</span></p>
+    <ul class="daylist">${items.map(x => `<li class="${x.b.id === pickBook ? 'hl' : ''}"><i class="sw" style="background:${colorOf(x.b)}"></i><span class="bt">${esc(x.b.title)}</span><span class="pg">${x.p}ページ</span></li>`).join('')}</ul></div>`;
+}
+function weekLabel(ws) {
+  const we = addDays(ws, 6);
+  const y = ws.getFullYear() !== new Date().getFullYear() ? `${ws.getFullYear()}年` : '';
+  const right = we.getMonth() === ws.getMonth() ? `${we.getDate()}日` : `${we.getMonth() + 1}月${we.getDate()}日`;
+  return `${y}${ws.getMonth() + 1}月${ws.getDate()}日〜${right}`;
+}
+function barHtml(dm) {
+  const ws = parseLocal(ui.weekStart);
+  const today = localDate();
+  const books = [...state.books].sort((a, b) => a.createdAt - b.createdAt);
+  const cols = [...Array(7)].map((_, i) => {
+    const d = addDays(ws, i), ds = localDate(d), m = dm.get(ds);
+    const segs = m ? books.filter(b => m.get(b.id)).map(b => ({ b, p: m.get(b.id) })) : [];
+    return { d, ds, segs, total: segs.reduce((s, x) => s + x.p, 0) };
+  });
+  const weekTotal = cols.reduce((s, c) => s + c.total, 0);
+  const W = 320, H = 250, L = 34, R = 6, T = 22, B = 46;
+  const cw = (W - L - R) / 7, bw = Math.min(26, cw * 0.58), ph = H - T - B;
+  const { max, step } = niceScale(Math.max(0, ...cols.map(c => c.total)));
+  const y = v => T + ph - (v / max) * ph;
+  const pick = ui.barPick;
+  let g = '';
+  for (let v = 0; v <= max; v += step) {
+    const yy = y(v).toFixed(1);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" class="grid${v === 0 ? ' base' : ''}"/><text x="${L - 6}" y="${(+yy + 4).toFixed(1)}" text-anchor="end">${v}</text>`;
+  }
+  cols.forEach((c, i) => {
+    const cx = L + cw * i + cw / 2, x = cx - bw / 2;
+    const isToday = c.ds === today;
+    if (isToday) g += `<rect class="nowbg" x="${(L + cw * i + 2).toFixed(1)}" y="${H - B + 4}" width="${(cw - 4).toFixed(1)}" height="40" rx="8"/>`;
+    g += `<rect class="hit" data-day="${c.ds}" x="${(L + cw * i).toFixed(1)}" y="${T}" width="${cw.toFixed(1)}" height="${ph + B}"/>`;
+    let acc = 0;
+    c.segs.forEach(s => {
+      const y1 = y(acc + s.p), y0 = y(acc);
+      let cls = 'segr';
+      if (pick) {
+        if (pick.book) cls += (pick.day === c.ds && pick.book === s.b.id) ? ' on' : ' dim';
+        else if (pick.day !== c.ds) cls += ' dim';
+      }
+      g += `<rect class="${cls}" data-day="${c.ds}" data-book="${esc(s.b.id)}" x="${x.toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0, y0 - y1).toFixed(1)}" fill="${colorOf(s.b)}"/>`;
+      acc += s.p;
+    });
+    if (c.total) g += `<text class="tot" x="${cx.toFixed(1)}" y="${(y(c.total) - 6).toFixed(1)}" text-anchor="middle">${c.total}</text>`;
+    const wcls = i === 0 ? ' sun' : i === 6 ? ' sat' : '';
+    g += `<text class="wdl${wcls}${isToday ? ' now' : ''}" x="${cx.toFixed(1)}" y="${H - B + 20}" text-anchor="middle">${WD[i]}</text>`;
+    g += `<text class="dtl${isToday ? ' now' : ''}" x="${cx.toFixed(1)}" y="${H - B + 37}" text-anchor="middle">${c.d.getMonth() + 1}/${c.d.getDate()}</text>`;
+  });
+  const isCurrent = ui.weekStart >= localDate(startOfWeek(new Date()));
+  return `
+  <div class="weekhead"><p class="wlabel">${weekLabel(ws)}</p><p class="wtotal">合計<b>${weekTotal}</b>ページ</p></div>
+  <div class="chartwrap">
+    <button type="button" class="arrow" id="wPrev" aria-label="前の週">${ICON.prev}</button>
+    <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${weekLabel(ws)}の読んだページ数">${g}</svg></div>
+    <button type="button" class="arrow" id="wNext" aria-label="次の週" ${isCurrent ? 'disabled' : ''}>${ICON.next}</button>
+  </div>
+  ${dayPanelHtml(pick && pick.day, pick && pick.book, dm, '棒をタップすると、その日に読んだ本がわかります。')}`;
+}
+function calHtml(dm) {
+  const [yy, mm] = ui.month.split('-').map(Number);
+  const first = new Date(yy, mm - 1, 1);
+  const daysIn = new Date(yy, mm, 0).getDate();
+  const today = localDate();
+  let cells = WD.split('').map((w, i) => `<div class="wd${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${w}</div>`).join('');
+  for (let i = 0; i < first.getDay(); i++) cells += '<div class="cell blank" aria-hidden="true"></div>';
+  let total = 0, readDays = 0;
+  for (let day = 1; day <= daysIn; day++) {
+    const d = new Date(yy, mm - 1, day), ds = localDate(d), m = dm.get(ds);
+    const pages = m ? [...m.values()].reduce((s, v) => s + v, 0) : 0;
+    if (pages) { total += pages; readDays++; }
+    const wd = d.getDay();
+    const cls = ['cell', wd === 0 ? 'sun' : wd === 6 ? 'sat' : '', ds === today ? 'today' : '', ds > today ? 'future' : '', ui.calPick === ds ? 'picked' : ''].filter(Boolean).join(' ');
+    const r = (hashNum(ds) % 13) - 6;
+    cells += `<button type="button" class="${cls}" data-cday="${ds}" ${ds > today ? 'disabled' : ''} aria-label="${mm}月${day}日 ${pages ? pages + 'ページ' : '記録なし'}">
+      <span class="dn">${day}</span>${pages ? `<span class="mstamp" style="--r:${r}deg">${pages}</span>` : ''}</button>`;
+  }
+  const isCurrent = ui.month >= today.slice(0, 7);
+  return `
+  <div class="cal">
+    <div class="calhead">
+      <button type="button" class="arrow" id="mPrev" aria-label="前の月">${ICON.prev}</button>
+      <p>${yy}年${mm}月</p>
+      <button type="button" class="arrow" id="mNext" aria-label="次の月" ${isCurrent ? 'disabled' : ''}>${ICON.next}</button>
+    </div>
+    <div class="calgrid">${cells}</div>
+    <p class="msum">${readDays ? `${mm}月は<b>${readDays}</b>日読んで、合計<b>${total}</b>ページ` : `${mm}月の記録はまだありません`}</p>
+  </div>
+  ${dayPanelHtml(ui.calPick, null, dm, '日付をタップすると、その日に読んだ本がわかります。')}`;
+}
+function renderStats() {
+  ui.page = 'stats';
+  if (!ui.weekStart) ui.weekStart = localDate(startOfWeek(new Date()));
+  if (!ui.month) ui.month = localDate().slice(0, 7);
+  const dm = buildDayMap();
+  const v = ui.statsView;
+  paint(`<header class="pagehead"><h1>読書の記録</h1></header>
+  <div class="viewseg" role="tablist" aria-label="表示の切り替え">
+    <button type="button" role="tab" aria-selected="${v === 'bar'}" data-view="bar">${ICON.bars}<span>グラフ</span></button>
+    <button type="button" role="tab" aria-selected="${v === 'cal'}" data-view="cal">${ICON.cal}<span>カレンダー</span></button>
+  </div>` + (v === 'bar' ? barHtml(dm) : calHtml(dm)) + navHtml('stats'));
+  app.querySelectorAll('[data-view]').forEach(el => el.onclick = () => { ui.statsView = el.dataset.view; renderStats(); });
+  if (v === 'bar') {
+    document.getElementById('wPrev').onclick = () => { ui.weekStart = localDate(addDays(parseLocal(ui.weekStart), -7)); ui.barPick = null; renderStats(); };
+    document.getElementById('wNext').onclick = () => { ui.weekStart = localDate(addDays(parseLocal(ui.weekStart), 7)); ui.barPick = null; renderStats(); };
+    app.querySelectorAll('.chart [data-day]').forEach(el => el.addEventListener('click', e => {
+      e.stopPropagation();
+      const day = el.dataset.day, book = el.dataset.book || null;
+      const p = ui.barPick;
+      ui.barPick = (p && p.day === day && p.book === book) ? null : { day, book };
+      renderStats();
+    }));
+  } else {
+    const shift = n => { const d = parseLocal(ui.month + '-01'); d.setMonth(d.getMonth() + n); ui.month = localDate(d).slice(0, 7); ui.calPick = null; renderStats(); };
+    document.getElementById('mPrev').onclick = () => shift(-1);
+    document.getElementById('mNext').onclick = () => shift(1);
+    app.querySelectorAll('[data-cday]').forEach(el => el.onclick = () => {
+      ui.calPick = ui.calPick === el.dataset.cday ? null : el.dataset.cday;
+      renderStats();
+    });
+  }
+}
+
+/* ========== データの書き出し・読み込み ========== */
+function renderData() {
+  ui.page = 'data';
+  const nb = state.books.length;
+  const nl = state.books.reduce((s, b) => s + b.logs.length, 0);
+  paint(pageBar('データ') + `
+  <section class="pad prose">
+    <h1 class="h1">データの書き出しと読み込み</h1>
+    <p>記録はこのブラウザの中だけに保存されています。ブラウザのデータを消したり、スマホを買い替えたりすると記録も消えるので、ときどきファイルに書き出しておいてください。</p>
+    <p class="help">いまのデータ：本${nb}冊、記録${nl}件</p>
+    <button type="button" class="btn primary block" id="exportBtn">ファイルに書き出す</button>
+    <label class="btn block filebtn">ファイルから読み込む<input type="file" id="importFile" accept="application/json,.json" hidden></label>
+    <p class="help">読み込むと、いまのデータはファイルの内容に置き換わります。</p>
+  </section>`);
+  document.getElementById('exportBtn').onclick = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `dokusho-note-${localDate()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('書き出しました');
+  };
+  document.getElementById('importFile').onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const d = normalizeState(JSON.parse(await file.text()));
+      if (await askConfirm(`いまのデータ（本${nb}冊）を、ファイルの内容（本${d.books.length}冊）に置き換えますか？`, '置き換える', true)) {
+        state = d;
+        ensureColors();
+        if (save()) { toast('読み込みました'); renderData(); }
+      }
+    } catch {
+      toast('読み込めませんでした。このアプリで書き出したファイルか確認してください');
+    }
+    e.target.value = '';
+  };
+}
+
+/* ========== 起動 ========== */
+document.addEventListener('visibilitychange', () => {
+  // アプリを離れたらカメラを止め、戻ってきたら再開する
+  if (document.hidden) stopScanner();
+  else if (ui.page === 'scan' && !scanner) renderScan();
+});
+window.addEventListener('error', e => toast('エラーが起きました：' + (e.message || '原因不明')));
+window.addEventListener('unhandledrejection', e => toast('エラーが起きました：' + ((e.reason && e.reason.message) || '原因不明')));
+try { if (storageOK && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch {}
+ui.hash = (history.state && history.state.h) || location.hash || '#/';
+histCall('replaceState', { d: curDepth(), h: ui.hash }, ui.hash);
+save();
+try { route(); }
+catch (e) { app.innerHTML = `<section class="pad"><p class="h1">起動できませんでした</p><p class="help">${esc(e && e.message)}</p></section>`; }
+</script>
+</body>
+</html>
