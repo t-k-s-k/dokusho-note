@@ -12,13 +12,13 @@
 <style>
 :root{
   --paper:#F3F5F4; --surface:#FFFFFF; --ink:#1F2A36; --muted:#5F6D79; --rule:#D5DEE3;
-  --stamp:#5E4A9B; --danger:#B3261E; --sun:#B83A3A; --sat:#2F5E9E; --hl:#ECE8F6;
+  --stamp:#5E4A9B; --danger:#B3261E; --sun:#B83A3A; --sat:#2F5E9E; --hl:#ECE8F6; --star:#B7791F;
   /* 日本語はスマホ標準のフォントで表示（Claudeのアプリと同じ見え方） */
   --font:system-ui,-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Noto Sans CJK JP","Yu Gothic UI",Meiryo,sans-serif;
   color-scheme:light dark;
 }
 @media (prefers-color-scheme: dark){
-  :root{ --paper:#151C23; --surface:#1D2630; --ink:#E3E9ED; --muted:#9CAAB5; --rule:#2F3C48; --stamp:#B9A6EE; --danger:#F4A79F; --sun:#F29A9A; --sat:#95B8F2; --hl:#2B2942; }
+  :root{ --paper:#151C23; --surface:#1D2630; --ink:#E3E9ED; --muted:#9CAAB5; --rule:#2F3C48; --stamp:#B9A6EE; --danger:#F4A79F; --sun:#F29A9A; --sat:#95B8F2; --hl:#2B2942; --star:#F2C24E; }
 }
 *,*::before,*::after{ box-sizing:border-box; }
 html{ -webkit-text-size-adjust:100%; }
@@ -31,6 +31,7 @@ button,input{ font:inherit; color:inherit; }
 button{ cursor:pointer; }
 :focus-visible{ outline:3px solid var(--stamp); outline-offset:2px; border-radius:6px; }
 .sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+[hidden]{ display:none !important; }
 svg.i{ width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; display:block; }
 
 /* ホーム */
@@ -40,10 +41,26 @@ svg.i{ width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8
 .today b{ color:var(--ink); font-size:17px; margin:0 2px; font-variant-numeric:tabular-nums; }
 .selbtn{ background:none; border:0; color:var(--stamp); font-weight:700; font-size:15px; padding:10px; border-radius:8px; }
 .selcount{ margin-left:auto; margin-right:10px; font-weight:700; font-size:15px; }
-.tabs{ display:flex; border-bottom:1px solid var(--rule); padding:0 12px; position:sticky; top:0; background:var(--paper); z-index:2; }
-.tabs button{ flex:1; background:none; border:0; padding:12px 4px 11px; color:var(--muted); font-size:15px; border-radius:0; }
+.shelfhead{ position:sticky; top:0; z-index:2; background:var(--paper); }
+.tabs{ display:flex; border-bottom:1px solid var(--rule); padding:0 4px; overflow-x:auto; scrollbar-width:none; }
+.tabs::-webkit-scrollbar{ display:none; }
+.tabs button{ flex:1 0 auto; background:none; border:0; padding:12px 3px 11px; color:var(--muted); font-size:14px; border-radius:0; white-space:nowrap; }
 .tabs button[aria-selected="true"]{ color:var(--ink); font-weight:700; box-shadow:inset 0 -2px 0 var(--stamp); }
-.count{ font-size:12px; margin-left:4px; font-variant-numeric:tabular-nums; }
+.count{ font-size:11.5px; margin-left:3px; font-variant-numeric:tabular-nums; }
+.tools{ display:flex; align-items:center; gap:6px; min-height:50px; padding:6px 4px 6px 12px; border-bottom:1px solid var(--rule); }
+.chips{ display:flex; align-items:center; gap:6px; flex:1; min-width:0; overflow-x:auto; scrollbar-width:none; padding:2px 0; }
+.chips::-webkit-scrollbar{ display:none; }
+.chips > .i{ width:18px; height:18px; color:var(--muted); }
+.chips.wrap{ flex-wrap:wrap; overflow:visible; margin-top:8px; }
+.chip{ flex:none; display:inline-flex; align-items:center; gap:4px; min-height:34px; padding:0 12px; border:1.5px solid var(--rule); border-radius:999px; background:var(--surface); color:var(--ink); font-size:13.5px; white-space:nowrap; }
+.chip[aria-pressed="true"], .chip.on{ background:var(--ink); border-color:var(--ink); color:var(--paper); font-weight:700; }
+.chip .i{ width:15px; height:15px; stroke-width:2.4; }
+.chip.on{ padding-right:4px; }
+.chip .x{ display:grid; place-items:center; width:28px; height:28px; padding:0; background:none; border:0; border-radius:50%; color:inherit; }
+.chip.add{ color:var(--muted); border-style:dashed; }
+.shown{ flex:1; color:var(--muted); font-size:13.5px; }
+.sortbtn{ flex:none; margin-left:auto; display:inline-flex; align-items:center; gap:4px; min-height:40px; padding:0 8px; background:none; border:0; color:var(--ink); font-size:13.5px; font-weight:700; border-radius:8px; white-space:nowrap; }
+.sortbtn .i{ width:18px; height:18px; }
 .shelf{ list-style:none; margin:0; padding:0; }
 .shelf li{ position:relative; }
 .shelf li + li{ border-top:1px solid var(--rule); }
@@ -59,7 +76,12 @@ svg.i{ width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8
 .rowbody{ display:block; flex:1; min-width:0; }
 .title{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-weight:700; font-size:16.5px; line-height:1.45; }
 .author{ display:block; color:var(--muted); font-size:13.5px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tag{ display:inline-block; font-size:12px; color:var(--stamp); border:1px solid currentColor; border-radius:4px; padding:0 6px; margin-top:6px; }
+.tag{ display:inline-block; font-size:12px; color:var(--stamp); border:1px solid currentColor; border-radius:4px; padding:0 6px; }
+.meta{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; margin-top:6px; }
+.ttag{ font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--rule); border-radius:4px; padding:0 6px; }
+.stars{ color:var(--star); font-size:12.5px; letter-spacing:1px; line-height:1; }
+.stars .off{ color:var(--rule); }
+.favmark{ color:var(--star); margin-right:4px; }
 .prog{ display:block; margin-top:8px; }
 .bar{ display:block; height:4px; background:var(--rule); border-radius:2px; overflow:hidden; }
 .bar i{ display:block; height:100%; background:var(--ink); border-radius:2px; }
@@ -67,12 +89,11 @@ svg.i{ width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8
 .empty{ padding:48px 24px; }
 .empty p{ color:var(--muted); }
 .empty .etitle{ font-size:19px; font-weight:700; color:var(--ink); margin-bottom:8px; }
-.datalinkwrap{ padding:28px 20px 8px; text-align:center; }
-.datalink{ color:var(--muted); font-size:13.5px; }
+.empty p + p{ margin-top:6px; }
 
 /* 下のバー */
 .nav{ position:fixed; left:0; right:0; bottom:0; z-index:5; background:var(--surface); border-top:1px solid var(--rule); padding-bottom:env(safe-area-inset-bottom,0px); }
-.nav .in{ max-width:560px; margin:0 auto; display:grid; grid-template-columns:repeat(3,1fr); }
+.nav .in{ max-width:560px; margin:0 auto; display:grid; grid-template-columns:repeat(5,1fr); }
 .nav button{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 0 10px; background:none; border:0; color:var(--muted); font-size:11.5px; border-radius:0; }
 .nav .ic{ display:grid; place-items:center; width:60px; height:30px; border-radius:15px; }
 .nav button[aria-current="page"]{ color:var(--ink); font-weight:700; }
@@ -120,7 +141,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .hint.bad{ color:var(--danger); }
 
 /* 表紙 */
-.cover{ flex:none; display:block; object-fit:cover; background:var(--rule); border-radius:2px 5px 5px 2px; box-shadow:0 1px 2px rgba(15,25,35,.22), inset 3px 0 0 rgba(0,0,0,.14); }
+.cover{ flex:none; display:block; background:var(--rule); border-radius:2px 5px 5px 2px; box-shadow:0 1px 2px rgba(15,25,35,.22), inset 3px 0 0 rgba(0,0,0,.14); }
 .cover.xs{ width:36px; height:52px; }
 .cover.sm{ width:48px; height:70px; }
 .cover.lg{ width:128px; height:186px; box-shadow:0 6px 18px rgba(15,25,35,.22), inset 4px 0 0 rgba(0,0,0,.14); }
@@ -129,6 +150,10 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .cover.xs.ph{ font-size:8px; padding:4px 3px; }
 .cover.sm.ph{ font-size:10px; padding:5px 4px 5px 3px; }
 .cover.lg.ph{ font-size:17px; padding:14px 10px 14px 8px; }
+.cover.xxs{ width:22px; height:32px; border-radius:1px 3px 3px 1px; }
+.cover.xxs.ph{ font-size:0; padding:0; }
+.cover.fill{ width:100%; height:auto; aspect-ratio:128/186; }
+.cover.fill.ph{ font-size:11px; padding:8px 6px 8px 5px; }
 
 /* ページ共通 */
 .pagebar{ display:flex; align-items:center; gap:4px; padding:8px 8px 0; min-height:52px; }
@@ -140,6 +165,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .pad{ padding:8px 20px 16px; }
 .h1{ font-size:20px; font-weight:700; line-height:1.4; margin:8px 0 12px; }
 .help{ color:var(--muted); font-size:13.5px; margin-top:8px; }
+.help a{ color:var(--stamp); }
+.help b{ color:var(--ink); }
 .notice{ background:var(--surface); border-left:3px solid var(--stamp); padding:10px 12px; font-size:14px; margin:4px 0 12px; border-radius:0 8px 8px 0; }
 .err{ color:var(--danger); font-size:13.5px; margin-top:6px; }
 .err:empty{ display:none; }
@@ -189,6 +216,77 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .infolist dt{ font-size:13px; color:var(--muted); }
 .infolist dd{ margin:2px 0 0; font-size:17px; font-weight:700; }
 .infolist .inline{ margin-top:6px; font-weight:400; }
+.mhead > div{ min-width:0; }
+.favbtn{ margin-left:auto; flex:none; width:44px; height:44px; display:grid; place-items:center; background:none; border:0; border-radius:50%; color:var(--muted); }
+.favbtn .i{ width:26px; height:26px; }
+.favbtn[aria-pressed="true"]{ color:var(--star); }
+.favbtn[aria-pressed="true"] .i, .rating button.on .i{ fill:currentColor; }
+.lbl{ font-size:13px; color:var(--muted); }
+.rating{ display:flex; align-items:center; gap:0; margin-top:16px; }
+.rating .lbl{ margin-right:10px; }
+.rating button{ width:40px; height:40px; display:grid; place-items:center; padding:0; background:none; border:0; border-radius:8px; color:var(--muted); }
+.rating button.on{ color:var(--star); }
+.rating .i{ width:27px; height:27px; }
+.tagedit{ margin-top:14px; }
+.tagedit .inline{ margin-top:8px; }
+.tagedit .inline input{ min-height:44px; background:var(--paper); }
+.tagedit .inline .btn{ min-height:44px; }
+
+/* 並び替えなどのメニュー */
+.menuov{ position:fixed; inset:0; z-index:35; }
+.menu{ position:fixed; min-width:196px; max-width:calc(100vw - 24px); background:var(--surface); border:1px solid var(--rule); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.22); padding:6px; animation:pop .14s ease-out; }
+.menu p{ font-size:12px; color:var(--muted); padding:6px 12px 4px; }
+.menu button{ display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; min-height:46px; padding:0 12px; background:none; border:0; border-radius:9px; font-size:15.5px; text-align:left; }
+.menu button[aria-checked="true"]{ font-weight:700; color:var(--stamp); }
+.menu button:hover, .menu button:focus-visible{ background:var(--hl); outline:none; }
+.menu .i{ width:18px; height:18px; stroke-width:2.6; }
+
+/* 統計 */
+.pagehead.split{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding-right:14px; }
+.periodbtn{ display:inline-flex; align-items:center; gap:2px; min-height:40px; padding:0 10px 0 16px; border:1.5px solid var(--rule); border-radius:999px; background:var(--surface); font-weight:700; font-size:15px; }
+.periodbtn .i{ width:18px; height:18px; }
+.periodnav{ display:grid; grid-template-columns:44px 1fr 44px; align-items:center; margin:10px 8px 0; min-height:48px; }
+.periodnav p{ text-align:center; font-weight:700; font-size:17px; }
+.periodnav .arrow{ width:44px; height:44px; }
+.tiles{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 16px 0; }
+.tile{ background:var(--surface); border:1px solid var(--rule); border-radius:16px; padding:12px 14px; min-width:0; }
+.tile.wide{ grid-column:1 / -1; }
+.tile .tl{ display:block; font-size:13px; color:var(--muted); }
+.tile .tv{ display:block; font-size:30px; font-weight:700; line-height:1.25; margin-top:2px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.tile .tv small{ font-size:14px; font-weight:400; color:var(--muted); margin-left:3px; }
+.tile .ts{ display:block; font-size:12.5px; color:var(--muted); margin-top:2px; }
+.sechead{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin:26px 20px 8px; }
+.sechead h2{ margin:0; font-size:15.5px; }
+.sechead span{ color:var(--muted); font-size:13px; white-space:nowrap; }
+.chartbox{ padding:0 14px 0 8px; }
+.chart .colb{ fill:var(--stamp); }
+.chart .vl{ fill:var(--ink); font-size:9.5px; font-weight:700; }
+.covergrid{ list-style:none; margin:0; padding:0 16px; display:grid; grid-template-columns:repeat(auto-fill,minmax(76px,1fr)); gap:16px 12px; }
+.cg{ display:flex; flex-direction:column; gap:5px; width:100%; padding:0; background:none; border:0; text-align:left; }
+.cgt{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:12px; line-height:1.4; font-weight:700; }
+.cgd{ font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.morebtn{ display:flex; margin:16px auto 0; min-height:42px; font-size:14px; }
+.none{ color:var(--muted); font-size:14px; margin:0 20px; }
+
+/* 設定 */
+.sech{ font-size:13.5px; color:var(--muted); font-weight:700; margin:24px 20px 8px; }
+.card{ margin:0 16px; padding:16px; background:var(--surface); border:1px solid var(--rule); border-radius:16px; }
+.card .btn.block{ margin-top:12px; }
+.card .btn.block:first-of-type{ margin-top:16px; }
+.card .btn .i{ width:20px; height:20px; }
+.card .help:last-child{ margin-top:10px; }
+.taglist{ list-style:none; margin:0; padding:0; }
+.taglist li{ display:flex; align-items:center; gap:8px; padding:8px 0; }
+.taglist li + li{ border-top:1px solid var(--rule); }
+.taglist .tn{ flex:1; min-width:0; font-weight:700; overflow-wrap:anywhere; }
+.taglist .tc{ color:var(--muted); font-size:13px; white-space:nowrap; }
+.minibtn{ flex:none; min-height:38px; padding:0 10px; border:1.5px solid var(--rule); border-radius:9px; background:var(--paper); font-size:13px; }
+.minibtn.danger{ color:var(--danger); }
+
+/* キーワード検索 */
+.results .rowbtn{ padding-right:20px; }
+.rsub{ display:block; color:var(--muted); font-size:12.5px; margin-top:2px; }
+.kwmore{ padding:4px 20px 0; }
 
 /* 記録（グラフ・カレンダー） */
 .viewseg{ display:grid; grid-template-columns:1fr 1fr; gap:3px; margin:12px 20px 0; padding:3px; background:var(--surface); border:1.5px solid var(--rule); border-radius:12px; }
@@ -230,8 +328,19 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .daypanel .help{ margin-top:0; }
 .cal{ padding:14px 12px 0; }
 .calhead{ display:grid; grid-template-columns:36px 1fr 36px; align-items:center; }
-.calhead p{ text-align:center; font-weight:700; font-size:17px; }
 .calhead .arrow{ height:44px; }
+.ymbtn{ justify-self:center; display:inline-flex; align-items:center; gap:4px; min-height:44px; padding:0 8px 0 12px; background:none; border:0; border-radius:10px; font-weight:700; font-size:17px; color:var(--ink); }
+.ymbtn .i{ width:18px; height:18px; transition:transform .15s; }
+.ymbtn[aria-expanded="true"]{ background:var(--hl); }
+.ymbtn[aria-expanded="true"] .i{ transform:rotate(180deg); }
+.ympanel{ margin:6px 2px 4px; padding:8px 10px 10px; background:var(--surface); border:1px solid var(--rule); border-radius:14px; }
+.ymyear{ display:grid; grid-template-columns:44px 1fr 44px; align-items:center; }
+.ymyear p{ text-align:center; font-weight:700; font-size:16px; }
+.ymyear .arrow{ width:44px; height:40px; }
+.ymgrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:6px; }
+.ymgrid button{ min-height:44px; border:1.5px solid var(--rule); background:var(--paper); border-radius:10px; font-size:15px; }
+.ymgrid button[aria-current="true"]{ background:var(--ink); border-color:var(--ink); color:var(--paper); font-weight:700; }
+.ymgrid button:disabled{ opacity:.35; cursor:default; }
 .calgrid{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; margin-top:6px; }
 .wd{ text-align:center; font-size:12px; color:var(--muted); padding:2px 0; }
 .wd.sun{ color:var(--sun); } .wd.sat{ color:var(--sat); }
@@ -259,7 +368,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .toast{ position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,8px); background:var(--ink); color:var(--paper); padding:10px 16px; border-radius:12px; font-size:14px; max-width:calc(100% - 32px); width:max-content; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:40; }
 .toast.show{ opacity:1; transform:translate(-50%,0); }
 @media (prefers-reduced-motion: reduce){
-  .overlay, .modal{ animation:none; }
+  .overlay, .modal, .menu{ animation:none; }
+  .ymbtn .i{ transition:none; }
   .toast{ transition:none; }
 }
 </style>
@@ -272,11 +382,17 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 /* ========== 設定 ========== */
 const STORE_KEY = 'dokusho-note-v1';
 const PONYFILL_URL = 'https://fastly.jsdelivr.net/npm/barcode-detector@3.2.2/dist/es/ponyfill.min.js';
+// 国立国会図書館サーチの検索API（個人・非営利なら申請なしで無料で使える）
+const NDL_API = 'https://ndlsearch.ndl.go.jp/api/opensearch';
 const STATUS = { reading: '読書中', want: '読みたい', done: '読了' };
 const STATUS_KEYS = ['reading', 'want', 'done'];
 const STATUS_NOTE = { reading: 'いま読んでいる本', want: 'これから読みたい本', done: '読み終わった本' };
+const TABS = [['reading', '読書中'], ['want', '読みたい'], ['done', '読了'], ['fav', 'お気に入り'], ['all', 'すべて']];
+const SORTS = [['added', '追加日順'], ['oldest', '古い順'], ['pubdate', '発売日順'], ['title', 'タイトル順'], ['author', '著者順'], ['rating', '評価順']];
+const PERIODS = [['year', '年間'], ['month', '月間'], ['all', '通算']];
 const WD = '日月火水木金土';
 const COLORS = ['#5E4A9B', '#2F7A6B', '#C0833A', '#3E6FA8', '#A2475E', '#6B8E3A', '#7A5C3E', '#4A5A70'];
+const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
 
 const svg = inner => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`;
 const ICON = {
@@ -291,12 +407,25 @@ const ICON = {
   next: svg('<path d="M9 18l6-6-6-6"/>'),
   barcode: svg('<path d="M4 5v14M7 5v14M10.5 5v14M13 5v14M16.5 5v14M20 5v14" stroke-width="1.6"/><path d="M8.7 5v14M18.2 5v14" stroke-width="0.9"/>'),
   pencil: svg('<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 7.5l3 3"/>'),
+  chart: svg('<path d="M4 3.5v17h16.5"/><path d="M8.5 16.5V12M13 16.5v-9M17.5 16.5v-7" stroke-width="2.8"/>'),
+  gear: svg('<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" stroke-width="2.6"/>'),
+  star: svg('<path d="M12 3.6l2.55 5.17 5.7.83-4.13 4.02.98 5.68L12 16.62l-5.1 2.68.98-5.68L3.75 9.6l5.7-.83z"/>'),
+  tag: svg('<path d="M3.8 12.4V4.8a1 1 0 0 1 1-1h7.6l8 8a1.4 1.4 0 0 1 0 2l-6.6 6.6a1.4 1.4 0 0 1-2 0z"/><circle cx="8.3" cy="8.3" r="1.3"/>'),
+  sort: svg('<path d="M8 4.5v15M4.5 16L8 19.5l3.5-3.5M16 19.5v-15M12.5 8L16 4.5 19.5 8"/>'),
+  down: svg('<path d="M6.5 9.5l5.5 5.5 5.5-5.5"/>'),
+  x: svg('<path d="M7 7l10 10M17 7L7 17"/>'),
+  keyword: svg('<path d="M4 6h15M4 11h8M4 16h5"/><circle cx="15.5" cy="15" r="3.8"/><path d="M18.3 17.8l2.4 2.4"/>'),
+  download: svg('<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/>'),
+  upload: svg('<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 19.5h14"/>'),
 };
 
 const app = document.getElementById('app');
 const ui = {
-  tab: 'reading', page: 'home', selecting: false, selected: new Set(),
-  statsView: 'bar', weekStart: null, month: null, barPick: null, calPick: null,
+  tab: 'reading', page: 'home', selecting: false, selected: new Set(), tagFilter: null,
+  statsView: 'bar', weekStart: null, month: null, barPick: null, calPick: null, ymOpen: false, ymYear: null,
+  statPeriod: 'year', statYear: null, statMonth: null, statAll: {},
+  kw: { field: 'title', q: '', items: [], idx: 1, hasMore: false, loading: false, error: '', searched: false, seq: 0, y: 0 },
+  hint: null,
   renderToken: 0, renderedHash: '', afterPop: null, hash: '#/',
 };
 let scanner = null, scanSession = 0, detectorPromise = null;
@@ -317,6 +446,8 @@ function hashNum(s) { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.ch
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+function pad2(n) { return String(n).padStart(2, '0'); }
+function tsDate(ts) { return localDate(new Date(ts)); }
 function parseLocal(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d || 1); }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function startOfWeek(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x; }
@@ -326,6 +457,12 @@ function fmtMD(ds) {
   return d.getFullYear() === new Date().getFullYear() ? md : `${d.getFullYear()}/${md}`;
 }
 function fmtLong(ds) { const d = parseLocal(ds); return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）`; }
+// 発売日は「2012」「2012-05」「2012-05-15」のどれか
+function pubLabel(p) {
+  const [y, m, d] = String(p || '').split('-').map(Number);
+  if (!y) return '';
+  return `${y}年` + (m ? `${m}月` : '') + (m && d ? `${d}日` : '');
+}
 let toastTimer;
 function toast(msg) {
   const el = document.getElementById('toast');
@@ -336,11 +473,23 @@ function toast(msg) {
 }
 
 /* ========== 保存 ========== */
-function emptyState() { return { version: 1, settings: { mode: 'pages' }, books: [] }; }
+function emptyState() { return { version: 2, settings: { mode: 'pages', sort: 'added', lastExport: null }, books: [] }; }
+function cleanTags(a) {
+  const out = [];
+  if (Array.isArray(a)) for (const t of a) {
+    const s = typeof t === 'string' ? t.trim().slice(0, 30) : '';
+    if (s && !out.includes(s)) out.push(s);
+  }
+  return out;
+}
 function normalizeState(d) {
   if (!d || !Array.isArray(d.books)) throw new Error('invalid data');
   const s = emptyState();
-  if (d.settings && (d.settings.mode === 'pages' || d.settings.mode === 'end')) s.settings.mode = d.settings.mode;
+  const st = d.settings || {};
+  if (st.mode === 'pages' || st.mode === 'end') s.settings.mode = st.mode;
+  if (SORTS.some(([k]) => k === st.sort)) s.settings.sort = st.sort;
+  s.settings.lastExport = Number(st.lastExport) || null;
+  const str = v => (typeof v === 'string' ? v : '');
   s.books = d.books.filter(b => b && typeof b.title === 'string').map(b => ({
     id: String(b.id || uid()),
     isbn: typeof b.isbn === 'string' ? b.isbn : '',
@@ -351,9 +500,17 @@ function normalizeState(d) {
     totalPages: toPosInt(b.totalPages),
     status: STATUS_KEYS.includes(b.status) ? b.status : 'reading',
     colorIdx: Number.isInteger(b.colorIdx) && b.colorIdx >= 0 && b.colorIdx < COLORS.length ? b.colorIdx : null,
+    pubdate: /^\d{4}(-\d{2}(-\d{2})?)?$/.test(b.pubdate) ? b.pubdate : '',
+    titleKana: str(b.titleKana),
+    authorKana: str(b.authorKana),
+    favorite: b.favorite === true,
+    rating: Number.isInteger(b.rating) && b.rating >= 0 && b.rating <= 5 ? b.rating : 0,
+    tags: cleanTags(b.tags),
     createdAt: Number(b.createdAt) || Date.now(),
     updatedAt: Number(b.updatedAt) || Date.now(),
     finishedAt: Number(b.finishedAt) || null,
+    wantAt: Number(b.wantAt) || null, // 「読みたい」に入れた日時（統計で使う）
+    metaAt: Number(b.metaAt) || null, // 足りない本の情報を最後に取りに行った日時
     logs: (Array.isArray(b.logs) ? b.logs : [])
       .filter(l => l && /^\d{4}-\d{2}-\d{2}$/.test(l.date))
       .map(l => ({
@@ -364,6 +521,11 @@ function normalizeState(d) {
         createdAt: Number(l.createdAt) || 0,
       })),
   }));
+  // 以前のデータには日時がないので、わかる範囲で補う
+  s.books.forEach(b => {
+    if (!b.wantAt && b.status === 'want') b.wantAt = b.createdAt;
+    if (!b.finishedAt && b.status === 'done') b.finishedAt = b.updatedAt || b.createdAt;
+  });
   return s;
 }
 function loadState() {
@@ -426,62 +588,112 @@ function normalizeIsbn(input) {
   return null;
 }
 
-/* ========== 本の情報を探す（openBD → Google Books） ========== */
-async function fetchJson(url, ms = 8000) {
+/* ========== 本の情報を探す（国立国会図書館サーチ） ========== */
+// 本の情報は国立国会図書館サーチだけから取る。openBD（データの改変禁止・本の紹介目的に限る）と
+// Google Books（ロゴとリンクの表示が必須・保存禁止）は、このアプリの使い方と利用規約が合わないため使わない
+async function fetchText(url, ms = 20000) { // 国立国会図書館サーチは数秒かかることがあるので長めに待つ
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), ms);
   try {
     const r = await fetch(url, { signal: c.signal });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return await r.json();
+    if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+    return await r.text();
   } finally { clearTimeout(t); }
 }
-async function fromOpenBD(isbn) {
-  const data = await fetchJson(`https://api.openbd.jp/v1/get?isbn=${isbn}`);
-  const rec = Array.isArray(data) ? data[0] : null;
-  if (!rec || !rec.summary) return null;
-  const s = rec.summary;
-  let pages = null;
-  const ext = rec.onix?.DescriptiveDetail?.Extent;
-  if (Array.isArray(ext)) {
-    for (const e of ext) {
-      const v = parseInt(e?.ExtentValue, 10);
-      if (v > 0 && (!e.ExtentUnit || e.ExtentUnit === '03')) { pages = v; break; }
-    }
+
+// 国立国会図書館の書誌の書き方（「村上, 春樹, 1949-」「書名. 巻名」など）を、ふだんの表記に直す
+const VOLCODE = /^[぀-ヿA-Za-z]{1,3}\s*[-‐]?\s*\d+(\s*[-‐]\s*\d+)+$/; // 文庫の番号（「む-5-29」など）
+function formatName(raw) {
+  const s = String(raw || '').replace(/[／/](著|作|訳|編|絵|文|画|原作|監修|翻訳|イラスト)+/g, '').trim();
+  const parts = s.split(/\s*[,，]\s*/).filter(p => p && !/^\d{3,4}\s*-\s*(\d{3,4})?$/.test(p) && !/^(生没年不詳|\d{3,4}生)$/.test(p));
+  if (parts.length < 2) return parts[0] || '';
+  const [fam, giv] = parts;
+  if (/^[\x20-\x7eÀ-ɏ]+$/.test(fam + giv)) return `${giv} ${fam}`;
+  return (fam + giv).replace(/\s+/g, '');
+}
+function joinNames(list) { return [...new Set(list.map(formatName).filter(Boolean))].join('、'); }
+function cleanTitle(t) {
+  return String(t || '')
+    .replace(/\s*[:：]\s*\[[^\]]*\]/g, '')   // 「 : [a novel]」のような補足
+    .replace(/([^A-Za-z])\.\s+/g, '$1 ')      // 「書名. 巻名」の区切り
+    .replace(/\s+/g, ' ').trim();
+}
+function withVolume(title, vol) {
+  vol = String(vol || '').trim();
+  return vol && !VOLCODE.test(vol) && !title.includes(vol) ? `${title} ${vol}` : title;
+}
+// 読み（カタカナ）は並び替えに使う
+function kanaKey(s) { return String(s || '').replace(/[,，]\s*\d{3,4}\s*-\s*(\d{3,4})?/g, '').replace(/[\s,，・]/g, ''); }
+function normDate(s) {
+  s = String(s || '').trim();
+  const m = s.match(/^(\d{4})(\d{2})?(\d{2})?$/) || s.match(/^(\d{4})(?:[-./年]\s*(\d{1,2}))?(?:[-./月]\s*(\d{1,2}))?/);
+  if (!m) return '';
+  const mo = m[2] ? Number(m[2]) : 0, d = m[3] ? Number(m[3]) : 0;
+  if (!mo || mo > 12) return m[1];
+  return `${m[1]}-${pad2(mo)}` + (d && d <= 31 ? `-${pad2(d)}` : '');
+}
+
+function parseNdlItem(it) {
+  const all = n => [...it.getElementsByTagName(n)].map(e => e.textContent.trim()).filter(Boolean);
+  const one = n => all(n)[0] || '';
+  let isbn = null;
+  for (const e of it.getElementsByTagName('dc:identifier')) {
+    if (e.getAttribute('xsi:type') === 'dcndl:ISBN' && (isbn = normalizeIsbn(e.textContent))) break;
   }
-  let title = (s.title || '').trim();
-  if (s.volume && !title.includes(s.volume)) title += ' ' + s.volume;
+  if (!isbn) return null;
+  const vol = one('dcndl:volume');
+  const pages = [...one('dc:extent').matchAll(/(\d+)\s*[pP]/g)].map(m => Number(m[1]));
+  const tk = kanaKey(one('dcndl:titleTranscription'));
   return {
-    title,
-    author: (s.author || '').replace(/／著/g, '').replace(/\s+/g, ' ').trim(),
-    publisher: s.publisher || '',
-    cover: s.cover || '',
-    totalPages: pages,
+    isbn,
+    title: withVolume(cleanTitle(one('dc:title')), vol),
+    author: joinNames(all('dc:creator')),
+    publisher: one('dc:publisher'),
+    pubdate: normDate(one('dcterms:issued') || one('dc:date')),
+    totalPages: pages.length ? Math.max(...pages) : null,
+    titleKana: tk ? tk + (VOLCODE.test(vol) ? '' : vol) : '',
+    authorKana: kanaKey(one('dcndl:creatorTranscription')),
   };
 }
-async function fromGoogle(isbn) {
-  const data = await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
-  const v = data?.items?.[0]?.volumeInfo;
-  if (!v) return null;
-  const cover = (v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '').replace(/^http:/, 'https:');
-  return {
-    title: [v.title, v.subtitle].filter(Boolean).join(' '),
-    author: (v.authors || []).join('、'),
-    publisher: v.publisher || '',
-    cover,
-    totalPages: v.pageCount > 0 ? v.pageCount : null,
-  };
+// 国立国会図書館サーチで本（ISBNがあるものだけ）を探す。
+// 検索対象は国立国会図書館自身のデータ（蔵書と新着書誌情報。どちらも CC BY 4.0）に絞る。
+// ほかの提供元のデータは利用条件がそれぞれ違うため含めない
+const NDL_DPID = 'iss-ndl-opac iss-ndl-opac-inprocess';
+async function ndlSearch(params, idx = 1, cnt = 30) {
+  const q = new URLSearchParams({ ...params, dpid: NDL_DPID, mediatype: 'books', cnt: String(cnt), idx: String(idx) });
+  const xml = new DOMParser().parseFromString(await fetchText(`${NDL_API}?${q}`), 'application/xml');
+  const total = parseInt(xml.getElementsByTagName('openSearch:totalResults')[0]?.textContent, 10) || 0;
+  const seen = new Set();
+  const items = [...xml.getElementsByTagName('item')].map(parseNdlItem)
+    .filter(x => x && !seen.has(x.isbn) && seen.add(x.isbn));
+  return { total, items };
 }
+// ISBNで本を探す。見つからなければ null、通信できないときや混み合っているときはエラーを投げる
 async function lookup(isbn) {
-  let a = null, b = null;
-  try { a = await fromOpenBD(isbn); } catch {}
-  // openBDで見つからない、またはページ数や表紙がないときはGoogle Booksで補う
-  if (!a || !a.totalPages || !a.cover) { try { b = await fromGoogle(isbn); } catch {} }
-  if (!a && !b) return null;
-  const filled = a ? Object.fromEntries(Object.entries(a).filter(([, v]) => v)) : {};
-  const r = { ...(b || {}), ...filled };
-  if (!r.title) return null;
-  return { title: r.title, author: r.author || '', publisher: r.publisher || '', cover: safeUrl(r.cover), totalPages: r.totalPages || null };
+  const { items } = await ndlSearch({ isbn }, 1, 5);
+  const x = items.find(i => i.isbn === isbn);
+  return x && x.title ? { ...x, totalPages: toPosInt(x.totalPages) } : null;
+}
+
+// 以前に追加した本で足りない情報（発売日・読み・ページ数・出版社）を、国立国会図書館サーチから補う。
+// タイトルと著者は、利用者が見慣れた表記のまま変えない。
+// 国立国会図書館サーチに負担をかけないよう、1回の起動で10冊まで、1冊ずつ間をあけて問い合わせる
+let backfillStarted = false;
+async function backfillMeta() {
+  if (backfillStarted || !navigator.onLine) return;
+  backfillStarted = true;
+  const now = Date.now();
+  const targets = state.books.filter(b => /^\d{13}$/.test(b.isbn) && (!b.metaAt || now - b.metaAt > 30 * 864e5)
+    && (!b.pubdate || !b.titleKana || !b.totalPages || !b.publisher)).slice(0, 10);
+  for (const b of targets) {
+    let info;
+    try { info = await lookup(b.isbn); } catch { return; } // 混み合っているときは次の起動にまわす
+    b.metaAt = Date.now();
+    if (info) for (const k of ['pubdate', 'titleKana', 'authorKana', 'publisher', 'totalPages']) if (!b[k] && info[k]) b[k] = info[k];
+    save();
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  if (targets.length && !document.querySelector('.overlay, .menuov')) refresh();
 }
 
 /* ========== 画面の切り替え（戻るボタン対応） ========== */
@@ -528,7 +740,8 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-tabnav]');
   if (t) {
     const h = t.dataset.tabnav;
-    if (h === '#/stats') { ui.barPick = null; ui.calPick = null; }
+    if (h === '#/cal') { ui.barPick = null; ui.calPick = null; ui.ymOpen = false; }
+    if (h === '#/stats') ui.statAll = {};
     if (ui.hash !== h) navReplace(h);
   }
 });
@@ -544,12 +757,19 @@ function route() {
   document.body.classList.toggle('scanning', path === '/scan');
   window.scrollTo(0, 0);
   if (path === '/search') return renderSearch();
+  if (path === '/keyword') return renderKeyword();
   if (path === '/scan') return renderScan();
   if (path === '/manual') return renderManual();
   if (path === '/found') return renderFound(params.get('isbn'));
+  if (path === '/cal') return renderCal();
   if (path === '/stats') return renderStats();
-  if (path === '/data') return renderData();
+  if (path === '/settings' || path === '/data') return renderSettings();
   return renderHome();
+}
+// データが変わったときに、いまの画面を描き直す（スクロール位置はそのまま）
+function refresh() {
+  const f = { home: renderHome, cal: renderCal, stats: renderStats, settings: renderSettings }[ui.page];
+  if (f) f();
 }
 
 /* ========== 画面の部品 ========== */
@@ -562,36 +782,22 @@ function todayPages() {
   for (const b of state.books) for (const l of b.logs) if (l.date === t) s += l.pages;
   return s;
 }
-function placeholderHtml(title, color, size) {
-  return `<span class="cover ${size} ph" style="--c:${color}" aria-hidden="true"><span>${esc(title)}</span></span>`;
-}
+// 表紙は画像を使わず、本ごとの色にタイトルを書いた背表紙風の表紙にする
+// （国立国会図書館の書影APIは2026年3月末で提供終了。ほかの表紙画像は利用条件が合わないため使わない）
 function coverHtml(b, size) {
-  const color = colorOf(b);
-  if (b.cover) return `<img class="cover ${size}" src="${esc(b.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-title="${esc(b.title)}" data-color="${color}">`;
-  return placeholderHtml(b.title || '', color, size);
-}
-// 表紙画像が読み込めないときは、背表紙風の代わりの表紙にする
-function wireCovers(root) {
-  root.querySelectorAll('img.cover').forEach(img => {
-    const swap = () => {
-      const size = ['lg', 'sm', 'xs'].find(s => img.classList.contains(s)) || 'sm';
-      img.outerHTML = placeholderHtml(img.dataset.title, img.dataset.color, size);
-    };
-    if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) swap();
-    else img.addEventListener('error', swap, { once: true });
-  });
+  return `<span class="cover ${size} ph" style="--c:${colorOf(b)}" aria-hidden="true"><span>${esc(b.title || '')}</span></span>`;
 }
 function pageBar(title, fallback = '#/') {
   return `<header class="pagebar"><button type="button" class="back" id="back" data-fallback="${esc(fallback)}">${ICON.back}戻る</button>${title ? `<p class="pbtitle">${esc(title)}</p>` : ''}</header>`;
 }
 function navHtml(active) {
-  const items = [['home', '#/', 'ホーム', ICON.home], ['search', '#/search', '検索', ICON.search], ['stats', '#/stats', 'カレンダー', ICON.cal]];
+  const items = [['home', '#/', 'ホーム', ICON.home], ['search', '#/search', '検索', ICON.search], ['cal', '#/cal', 'カレンダー', ICON.cal],
+    ['stats', '#/stats', '統計', ICON.chart], ['settings', '#/settings', '設定', ICON.gear]];
   return `<nav class="nav" aria-label="メニュー"><div class="in">${items.map(([k, h, l, ic]) =>
     `<button type="button" data-tabnav="${h}" ${k === active ? 'aria-current="page"' : ''}><span class="ic">${ic}</span>${l}</button>`).join('')}</div></nav>`;
 }
 function paint(html) {
   app.innerHTML = html;
-  wireCovers(app);
   const back = document.getElementById('back');
   if (back) back.onclick = () => goBack(back.dataset.fallback || '#/');
 }
@@ -633,10 +839,43 @@ function openModal(build) {
   pushLayer(() => {
     ov.remove();
     if (!document.querySelector('.overlay')) document.body.classList.remove('modal-open');
-    if (ctx.changed && ui.page === 'home') renderHome();
+    if (ctx.changed) refresh();
   });
   build(m, ctx);
   return ctx;
+}
+
+// ボタンの下に出す選択メニュー（並び替え・期間）。選んだ項目のキーを返す（閉じただけなら null）
+function openMenu(anchor, title, options, current) {
+  return new Promise(resolve => {
+    let result = null;
+    const ov = document.createElement('div');
+    ov.className = 'menuov';
+    ov.innerHTML = `<div class="menu" role="menu" aria-label="${esc(title)}"><p aria-hidden="true">${esc(title)}</p>${options.map(([k, l]) =>
+      `<button type="button" role="menuitemradio" aria-checked="${k === current}" data-k="${k}"><span>${esc(l)}</span>${k === current ? ICON.check : ''}</button>`).join('')}</div>`;
+    document.body.appendChild(ov);
+    const menu = ov.firstChild;
+    const r = anchor.getBoundingClientRect();
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    menu.style.left = Math.max(12, Math.min(r.right - mw, innerWidth - mw - 12)) + 'px';
+    menu.style.top = (r.bottom + 6 + mh > innerHeight - 12 ? Math.max(12, r.top - mh - 6) : r.bottom + 6) + 'px';
+    pushLayer(() => { ov.remove(); resolve(result); });
+    ov.addEventListener('click', e => {
+      const b = e.target.closest('[data-k]');
+      if (b) { result = b.dataset.k; popLayer(); }
+      else if (!menu.contains(e.target)) popLayer();
+    });
+    ov.addEventListener('keydown', e => {
+      if (e.key === 'Escape') popLayer();
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const bs = [...menu.querySelectorAll('button')];
+        const i = bs.indexOf(document.activeElement);
+        bs[(i + (e.key === 'ArrowDown' ? 1 : bs.length - 1)) % bs.length].focus();
+      }
+    });
+    setTimeout(() => (menu.querySelector('[aria-checked="true"]') || menu.querySelector('button')).focus(), 20);
+  });
 }
 
 
@@ -692,7 +931,6 @@ function openRecord(b) {
         ${last ? `<p class="lastlog">前回の記録：${fmtMD(last.date)}　${last.pages}ページ<button type="button" class="linkbtn" id="undo">取り消す</button></p>` : ''}
         <div class="mbtns"><button type="button" class="btn" id="mCancel">キャンセル</button><button class="btn primary">記録する</button></div>
       </form>`;
-      wireCovers(m);
       const form = m.querySelector('#logForm');
       const f = form.elements;
       const unit = m.querySelector('#unit'), hint = m.querySelector('#hint');
@@ -764,63 +1002,162 @@ function openRecord(b) {
   });
 }
 
-// 本の情報（アプリに追加した日）
+// 本の情報（お気に入り・評価・タグ・総ページ数・読み終わった日）
 function openInfo(b) {
   openModal((m, ctx) => {
-    const draw = editing => {
-      m.innerHTML = `
-      <div class="mhead">${coverHtml(b, 'xs')}<div><p class="mtitle" id="mTitle">${esc(b.title)}</p>${b.author ? `<p class="msub">${esc(b.author)}</p>` : ''}</div></div>
+    let editing = null;
+    const changed = () => {
+      b.updatedAt = Date.now();
+      if (!save()) return false;
+      ctx.changed = true;
+      return true;
+    };
+    const draw = focusSel => {
+      const today = localDate();
+      const others = allTags().map(([t]) => t).filter(t => !b.tags.includes(t));
+      m.innerHTML = `<div class="mhead">${coverHtml(b, 'xs')}<div><p class="mtitle" id="mTitle">${esc(b.title)}</p>${b.author ? `<p class="msub">${esc(b.author)}</p>` : ''}</div>
+        <button type="button" class="favbtn" id="favBtn" aria-pressed="${b.favorite}" aria-label="お気に入り">${ICON.star}</button></div>` + `
+      <div class="rating" role="radiogroup" aria-label="評価"><span class="lbl" aria-hidden="true">評価</span>${[1, 2, 3, 4, 5].map(n =>
+        `<button type="button" role="radio" aria-checked="${b.rating === n}" aria-label="星${n}つ" class="${n <= b.rating ? 'on' : ''}" data-rate="${n}">${ICON.star}</button>`).join('')}</div>
+      <div class="tagedit"><p class="lbl">タグ</p>
+        ${b.tags.length ? `<div class="chips wrap">${b.tags.map(t => `<span class="chip on">${esc(t)}<button type="button" class="x" data-untag="${esc(t)}" aria-label="タグ「${esc(t)}」を外す">${ICON.x}</button></span>`).join('')}</div>` : ''}
+        <form class="inline" id="tagForm" novalidate><input name="tag" maxlength="30" autocomplete="off" placeholder="新しいタグ（例：小説、仕事）" aria-label="新しいタグ"><button class="btn">追加</button></form>
+        ${others.length ? `<div class="chips wrap">${others.map(t => `<button type="button" class="chip add" data-addtag="${esc(t)}" aria-label="タグ「${esc(t)}」を付ける">＋ ${esc(t)}</button>`).join('')}</div>` : ''}
+      </div>
       <dl class="infolist">
-        <div><dt>アプリに追加した日</dt><dd>${fmtLong(localDate(new Date(b.createdAt)))}</dd></div>
-        <div><dt>総ページ数</dt><dd>${editing
+        <div><dt>状態</dt><dd>${STATUS[b.status]}</dd></div>
+        <div><dt>アプリに追加した日</dt><dd>${fmtLong(tsDate(b.createdAt))}</dd></div>
+        ${b.pubdate ? `<div><dt>発売日</dt><dd>${pubLabel(b.pubdate)}</dd></div>` : ''}
+        <div><dt>総ページ数</dt><dd>${editing === 'tp'
           ? `<form class="inline" id="tpForm" novalidate><input name="tp" type="number" inputmode="numeric" min="1" value="${b.totalPages || ''}" aria-label="総ページ数"><button class="btn primary">保存</button></form>`
           : `${b.totalPages ? b.totalPages + 'ページ' : 'まだ入力していません'} <button type="button" class="linkbtn" id="tpEdit">変更</button>`}</dd></div>
+        ${b.status === 'done' ? `<div><dt>読み終わった日</dt><dd>${editing === 'fd'
+          ? `<form class="inline" id="fdForm" novalidate><input name="fd" type="date" value="${tsDate(b.finishedAt || Date.now())}" max="${today}" aria-label="読み終わった日"><button class="btn primary">保存</button></form>`
+          : `${b.finishedAt ? fmtLong(tsDate(b.finishedAt)) : '—'} <button type="button" class="linkbtn" id="fdEdit">変更</button>`}</dd></div>` : ''}
       </dl>
       <div class="mbtns one"><button type="button" class="btn" id="mClose">閉じる</button></div>`;
-      wireCovers(m);
-      m.querySelector('#mClose').onclick = () => popLayer();
-      const ed = m.querySelector('#tpEdit');
-      if (ed) ed.onclick = () => { draw(true); m.querySelector('input[name=tp]').focus(); };
-      const tf = m.querySelector('#tpForm');
+      const $ = s => m.querySelector(s);
+      $('#mClose').onclick = () => popLayer();
+      $('#favBtn').onclick = () => {
+        b.favorite = !b.favorite;
+        if (changed()) { toast(b.favorite ? 'お気に入りに追加しました' : 'お気に入りから外しました'); draw('#favBtn'); }
+      };
+      m.querySelectorAll('[data-rate]').forEach(el => el.onclick = () => {
+        const n = Number(el.dataset.rate);
+        b.rating = b.rating === n ? 0 : n; // 同じ星をもう一度タップすると評価を消す
+        if (changed()) draw(`[data-rate="${n}"]`);
+      });
+      m.querySelectorAll('[data-untag]').forEach(el => el.onclick = () => {
+        b.tags = b.tags.filter(t => t !== el.dataset.untag);
+        if (changed()) draw('#tagForm button');
+      });
+      m.querySelectorAll('[data-addtag]').forEach(el => el.onclick = () => {
+        if (!b.tags.includes(el.dataset.addtag)) b.tags.push(el.dataset.addtag);
+        if (changed()) draw('#tagForm button');
+      });
+      const tagForm = $('#tagForm');
+      onSubmit(tagForm, () => {
+        // 「、」やカンマで区切ると、いくつかまとめて付けられる
+        const add = tagForm.elements.tag.value.split(/[,、，]/).map(s => s.trim().slice(0, 30)).filter(s => s && !b.tags.includes(s));
+        if (!add.length) { tagForm.elements.tag.focus(); return; }
+        b.tags.push(...new Set(add));
+        if (changed()) draw('#tagForm input');
+      });
+      const tpEdit = $('#tpEdit');
+      if (tpEdit) tpEdit.onclick = () => { editing = 'tp'; draw('input[name=tp]'); };
+      const tf = $('#tpForm');
       if (tf) onSubmit(tf, () => {
         b.totalPages = toPosInt(tf.elements.tp.value);
-        b.updatedAt = Date.now();
-        if (save()) { ctx.changed = true; toast('総ページ数を保存しました'); draw(false); }
+        editing = null;
+        if (changed()) toast('総ページ数を保存しました');
+        draw('#tpEdit');
       });
+      const fdEdit = $('#fdEdit');
+      if (fdEdit) fdEdit.onclick = () => { editing = 'fd'; draw('input[name=fd]'); };
+      const ff = $('#fdForm');
+      if (ff) onSubmit(ff, () => {
+        const v = ff.elements.fd.value;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v > localDate()) { ff.elements.fd.focus(); return; }
+        b.finishedAt = parseLocal(v).getTime() + 12 * 3600e3;
+        editing = null;
+        if (changed()) toast('読み終わった日を保存しました');
+        draw('#fdEdit');
+      });
+      if (focusSel) { const f = $(focusSel); if (f) f.focus(); }
     };
-    draw(false);
-    setTimeout(() => m.querySelector('#mClose').focus(), 50);
+    draw();
+    setTimeout(() => m.querySelector('#mClose')?.focus(), 50);
   });
 }
 
 /* ========== ホーム ========== */
+// 本に付いているタグの一覧（[タグ, 冊数]、名前順）
+function allTags() {
+  const m = new Map();
+  state.books.forEach(b => b.tags.forEach(t => m.set(t, (m.get(t) || 0) + 1)));
+  return [...m.entries()].sort((a, b) => collator.compare(a[0], b[0]));
+}
+function inTab(b, tab) { return tab === 'all' || (tab === 'fav' ? b.favorite : b.status === tab); }
+// タイトル・著者は読み（カタカナ）があれば読みで、なければ表記で並べる
+function titleKey(b) { return b.titleKana || b.title; }
+function sortBooks(list, key) {
+  const newer = (a, b) => b.createdAt - a.createdAt;
+  const cmp = {
+    added: newer,
+    oldest: (a, b) => a.createdAt - b.createdAt,
+    pubdate: (a, b) => (!a.pubdate - !b.pubdate) || (a.pubdate < b.pubdate ? 1 : a.pubdate > b.pubdate ? -1 : 0) || newer(a, b),
+    title: (a, b) => collator.compare(titleKey(a), titleKey(b)) || newer(a, b),
+    author: (a, b) => (!a.author - !b.author) || collator.compare(a.authorKana || a.author, b.authorKana || b.author) || collator.compare(titleKey(a), titleKey(b)),
+    rating: (a, b) => (b.rating - a.rating) || newer(a, b),
+  }[key] || newer;
+  return [...list].sort(cmp);
+}
+function starsHtml(r) {
+  return `<span class="stars" role="img" aria-label="評価${r}">${'★'.repeat(r)}<span class="off">${'★'.repeat(5 - r)}</span></span>`;
+}
 function renderHome() {
   ui.page = 'home';
   const sel = ui.selecting;
-  const counts = { reading: 0, want: 0, done: 0, all: state.books.length };
-  state.books.forEach(b => counts[b.status]++);
-  const tabs = [['reading', '読書中'], ['want', '読みたい'], ['done', '読了'], ['all', 'すべて']];
-  const list = state.books
-    .filter(b => ui.tab === 'all' || b.status === ui.tab)
-    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const tags = allTags();
+  if (ui.tagFilter && !tags.some(([t]) => t === ui.tagFilter)) ui.tagFilter = null;
+  const tf = ui.tagFilter;
+  const pool = tf ? state.books.filter(b => b.tags.includes(tf)) : state.books;
+  const counts = Object.fromEntries(TABS.map(([k]) => [k, pool.filter(b => inTab(b, k)).length]));
+  const list = sortBooks(pool.filter(b => inTab(b, ui.tab)), state.settings.sort);
+  const sortLabel = SORTS.find(([k]) => k === state.settings.sort)[1];
+  const showStatus = ui.tab === 'all' || ui.tab === 'fav';
   let body;
   if (!state.books.length) {
-    body = `<div class="empty"><p class="etitle">本棚はまだ空です</p><p>下の「検索」から、バーコードやISBNで本を追加できます。</p></div>`;
+    body = `<div class="empty"><p class="etitle">本棚はまだ空です</p><p>下の「検索」から、バーコードやISBN、タイトルなどで本を追加できます。</p></div>`;
   } else if (!list.length) {
-    body = `<div class="empty"><p>「${ui.tab === 'all' ? 'すべて' : STATUS[ui.tab]}」の本はありません。</p></div>`;
+    const where = TABS.find(([k]) => k === ui.tab)[1];
+    body = `<div class="empty"><p>${tf ? `タグ「${esc(tf)}」が付いた` : ''}「${where}」の本はありません。</p>
+      ${ui.tab === 'fav' && !tf ? `<p>本の右にある ⓘ を開いて☆をタップすると、お気に入りに追加できます。</p>` : ''}</div>`;
   } else {
     body = `<ul class="shelf${sel ? ' selecting' : ''}">${list.map(b => {
       const on = sel && ui.selected.has(b.id);
+      const meta = [
+        showStatus ? `<span class="tag">${STATUS[b.status]}</span>` : '',
+        b.rating ? starsHtml(b.rating) : '',
+        ...b.tags.map(t => `<span class="ttag">${esc(t)}</span>`),
+      ].join('');
       return `<li class="${on ? 'sel' : ''}">
         <button type="button" class="rowbtn" data-book="${esc(b.id)}" ${sel ? `aria-pressed="${on}"` : ''}>
           ${sel ? `<span class="check">${ICON.check}</span>` : ''}${coverHtml(b, 'sm')}
-          <span class="rowbody"><span class="title">${esc(b.title)}</span>${b.author ? `<span class="author">${esc(b.author)}</span>` : ''}
-          ${ui.tab === 'all' ? `<span class="tag">${STATUS[b.status]}</span>` : ''}${progressHtml(b)}</span>
+          <span class="rowbody"><span class="title">${b.favorite ? '<span class="favmark" role="img" aria-label="お気に入り">★</span>' : ''}${esc(b.title)}</span>${b.author ? `<span class="author">${esc(b.author)}</span>` : ''}
+          ${meta ? `<span class="meta">${meta}</span>` : ''}${progressHtml(b)}</span>
         </button>
         ${sel ? '' : `<button type="button" class="info" data-info="${esc(b.id)}" aria-label="「${esc(b.title)}」の情報">${ICON.info}</button>`}
       </li>`;
     }).join('')}</ul>`;
   }
+  const tools = state.books.length ? `<div class="tools">
+    ${tags.length
+      ? `<div class="chips" role="group" aria-label="タグで絞り込み">${ICON.tag}${tags.map(([t]) =>
+        `<button type="button" class="chip" data-tagf="${esc(t)}" aria-pressed="${t === tf}">${esc(t)}${t === tf ? ICON.x : ''}</button>`).join('')}</div>`
+      : `<p class="shown">${list.length}冊</p>`}
+    <button type="button" class="sortbtn" id="sortBtn" aria-haspopup="menu" aria-label="並び替え（いまは${sortLabel}）">${ICON.sort}${sortLabel}</button>
+  </div>` : '';
   const header = sel
     ? `<header class="top"><h1 class="brand">読書ノート</h1><p class="selcount" aria-live="polite">${ui.selected.size}冊を選択中</p></header>`
     : `<header class="top"><h1 class="brand">読書ノート</h1><p class="today">今日<b>${todayPages()}</b>ページ</p>${state.books.length ? '<button type="button" class="selbtn" id="selBtn">選択</button>' : ''}</header>`;
@@ -834,17 +1171,33 @@ function renderHome() {
       <button type="button" class="btn ft" id="selBack">戻る</button>
     </div></div>`;
   } else {
-    bottom = `<p class="datalinkwrap"><a class="datalink" href="#/data" data-nav>データの書き出し・読み込み</a></p>` + navHtml('home');
+    bottom = navHtml('home');
   }
   const pv = storageOK ? '' : '<p class="notice pv">この画面では記録は保存されません。GitHub Pagesに置いたURLで開くと保存されます。</p>';
-  paint(header + pv + `<nav class="tabs" role="tablist" aria-label="本の状態">${tabs.map(([k, l]) =>
-    `<button type="button" role="tab" aria-selected="${ui.tab === k}" data-tab="${k}">${l}<span class="count">${counts[k]}</span></button>`).join('')}</nav>` + body + bottom);
+  paint(header + pv + `<div class="shelfhead"><nav class="tabs" role="tablist" aria-label="本の状態">${TABS.map(([k, l]) =>
+    `<button type="button" role="tab" aria-selected="${ui.tab === k}" data-tab="${k}">${l}<span class="count">${counts[k]}</span></button>`).join('')}</nav>${tools}</div>` + body + bottom);
 
+  // 選んでいるタブ・タグが横にはみ出ていたら見える位置までずらす
+  for (const [box, on] of [['.tabs', '[aria-selected="true"]'], ['.chips', '[aria-pressed="true"]']]) {
+    const c = app.querySelector(box), t = c && c.querySelector(on);
+    if (t && (t.offsetLeft + t.offsetWidth > c.clientWidth || t.offsetLeft < c.scrollLeft)) c.scrollLeft = t.offsetLeft - 24;
+  }
   app.querySelectorAll('[data-tab]').forEach(el => el.onclick = () => {
     ui.tab = el.dataset.tab;
     if (sel) ui.selected.clear();
     renderHome();
   });
+  app.querySelectorAll('[data-tagf]').forEach(el => el.onclick = () => {
+    ui.tagFilter = ui.tagFilter === el.dataset.tagf ? null : el.dataset.tagf;
+    if (sel) ui.selected.clear();
+    renderHome();
+  });
+  const sortBtn = document.getElementById('sortBtn');
+  if (sortBtn) sortBtn.onclick = async () => {
+    const k = await openMenu(sortBtn, '並び替え', SORTS, state.settings.sort);
+    if (k && k !== state.settings.sort) { state.settings.sort = k; save(); }
+    if (ui.page === 'home') { renderHome(); document.getElementById('sortBtn')?.focus(); }
+  };
   const selBtn = document.getElementById('selBtn');
   if (selBtn) selBtn.onclick = () => {
     ui.selecting = true; ui.selected = new Set();
@@ -874,8 +1227,11 @@ function renderHome() {
       let n = 0;
       state.books.forEach(b => {
         if (!ui.selected.has(b.id)) return;
-        if (b.status !== k) { b.status = k; n++; }
-        if (k === 'done' && !b.finishedAt) b.finishedAt = now;
+        if (b.status !== k) {
+          b.status = k; n++;
+          if (k === 'want') b.wantAt = now;
+          if (k === 'done') b.finishedAt = now;
+        }
         b.updatedAt = now;
       });
       if (save()) toast(`${ui.selected.size}冊を「${STATUS[k]}」に移動しました`);
@@ -898,10 +1254,102 @@ function renderSearch() {
   paint(`<header class="pagehead"><h1>本を探す</h1></header>
   <section class="pad">
     <button type="button" class="bigopt" id="goScan">${ICON.barcode}<span><b>バーコードで検索</b><span>本の裏にある、978から始まるバーコードを読み取ります</span></span></button>
+    <button type="button" class="bigopt" id="goKeyword">${ICON.keyword}<span><b>キーワードで検索</b><span>タイトルや著者の名前で本を探します</span></span></button>
     <button type="button" class="bigopt" id="goManual">${ICON.pencil}<span><b>ISBN・手入力</b><span>ISBNの番号で探すか、タイトルなどを入力して追加します</span></span></button>
   </section>` + navHtml('search'));
   document.getElementById('goScan').onclick = () => nav('#/scan');
+  document.getElementById('goKeyword').onclick = () => nav('#/keyword');
   document.getElementById('goManual').onclick = () => nav('#/manual');
+}
+
+/* ========== キーワード検索（国立国会図書館サーチ） ========== */
+function renderKeyword() {
+  ui.page = 'keyword';
+  const k = ui.kw;
+  const ph = k.field === 'author' ? '著者の名前（例：村上春樹）' : 'タイトル（例：ノルウェイの森）';
+  paint(pageBar('キーワード検索', '#/search') + `
+  <section class="pad">
+    <form id="kwForm" novalidate role="search">
+      <fieldset class="seg" style="margin-top:4px"><legend>探す項目</legend><div class="opts">
+        <label><input type="radio" name="field" value="title" ${k.field === 'title' ? 'checked' : ''}><span>タイトル</span></label>
+        <label><input type="radio" name="field" value="author" ${k.field === 'author' ? 'checked' : ''}><span>著者</span></label>
+      </div></fieldset>
+      <div class="inline" style="margin-top:12px"><input name="q" type="search" enterkeyhint="search" autocomplete="off" value="${esc(k.q)}" placeholder="${ph}" aria-label="キーワード"><button class="btn primary">検索</button></div>
+    </form>
+  </section>
+  <div id="kwResults"></div>`);
+  const form = document.getElementById('kwForm');
+  form.addEventListener('change', e => {
+    if (e.target.name !== 'field') return;
+    k.field = form.elements.field.value;
+    form.elements.q.placeholder = k.field === 'author' ? '著者の名前（例：村上春樹）' : 'タイトル（例：ノルウェイの森）';
+    if (k.q) runKeyword(false); // 入力済みなら、切り替えた項目でそのまま探し直す
+  });
+  onSubmit(form, () => {
+    const q = form.elements.q.value.trim();
+    if (!q) { form.elements.q.focus(); return; }
+    k.q = q;
+    form.elements.q.blur(); // スマホのキーボードを閉じて結果を見やすくする
+    runKeyword(false);
+  });
+  drawKeywordResults();
+  if (k.y) { window.scrollTo(0, k.y); k.y = 0; }
+  else if (!k.searched) setTimeout(() => form.elements.q.focus(), 50);
+}
+function drawKeywordResults() {
+  const box = document.getElementById('kwResults');
+  if (!box || ui.page !== 'keyword') return;
+  const k = ui.kw;
+  let html = '';
+  if (k.error) html += `<p class="notice" style="margin:0 20px 12px">${esc(k.error)}</p>`;
+  if (k.items.length) {
+    html += `<ul class="shelf results">${k.items.map((x, i) => {
+      const have = state.books.some(b => b.isbn === x.isbn);
+      const sub = [x.publisher, pubLabel(x.pubdate)].filter(Boolean).join('・');
+      return `<li><button type="button" class="rowbtn" data-kw="${i}">${coverHtml(x, 'sm')}
+        <span class="rowbody"><span class="title">${esc(x.title)}</span>${x.author ? `<span class="author">${esc(x.author)}</span>` : ''}
+        ${sub ? `<span class="rsub">${esc(sub)}</span>` : ''}${have ? '<span class="meta"><span class="tag">本棚にあります</span></span>' : ''}</span></button></li>`;
+    }).join('')}</ul>`;
+  } else if (k.searched && !k.loading && !k.error) {
+    html += `<div class="empty"><p>「${esc(k.q)}」に当てはまる本が見つかりませんでした。</p><p>言葉を短くするか、「ISBN・手入力」から追加してください。</p></div>`;
+  }
+  if (k.loading) html += `<p class="loading" aria-live="polite">探しています…</p>`;
+  else if (k.hasMore && k.items.length) html += `<div class="kwmore"><button type="button" class="btn block" id="kwMore">もっと見る</button></div>`;
+  if (k.items.length || k.searched) html += `<p class="help" style="margin:16px 20px 0">出典：国立国会図書館サーチ（国立国会図書館のデータ、CC BY 4.0。書き方を一部変えています）。発売されたばかりの本は、まだ見つからないことがあります。</p>`;
+  box.innerHTML = html;
+  box.querySelectorAll('[data-kw]').forEach(el => el.onclick = () => {
+    const x = k.items[Number(el.dataset.kw)];
+    if (!x) return;
+    ui.hint = x;
+    k.y = window.scrollY;
+    nav('#/found?isbn=' + x.isbn);
+  });
+  const more = document.getElementById('kwMore');
+  if (more) more.onclick = () => runKeyword(true);
+}
+async function runKeyword(more) {
+  const k = ui.kw;
+  if (!more) { k.items = []; k.idx = 1; k.hasMore = false; window.scrollTo(0, 0); }
+  k.error = '';
+  k.loading = true;
+  const my = ++k.seq;
+  drawKeywordResults();
+  try {
+    const { total, items } = await ndlSearch({ [k.field === 'author' ? 'creator' : 'title']: k.q }, k.idx, 30);
+    if (my !== k.seq) return;
+    const seen = new Set(k.items.map(x => x.isbn));
+    items.forEach(x => { if (!seen.has(x.isbn)) { seen.add(x.isbn); k.items.push(x); } });
+    k.idx += 30;
+    k.hasMore = k.idx <= total;
+  } catch (e) {
+    if (my !== k.seq) return;
+    k.error = navigator.onLine === false ? 'オフラインのため検索できません。通信できる場所でもう一度お試しください。'
+      : e && e.status === 429 ? '検索が混み合っています。少し待ってからもう一度お試しください。'
+      : '検索できませんでした。少し待ってからもう一度お試しください。';
+  }
+  k.searched = true;
+  k.loading = false;
+  drawKeywordResults();
 }
 
 /* ========== バーコード読み取り ========== */
@@ -1084,24 +1532,35 @@ async function renderFound(isbnParam) {
     document.getElementById('cOk').onclick = () => { ui.tab = dup.status; backTo('#/'); };
     return;
   }
-  paint(pageBar('', '#/search') + `<section class="pad"><p class="loading" aria-live="polite">ISBN ${isbn} の本を探しています…</p></section>`);
-  const info = await lookup(isbn);
+  // キーワード検索の結果から来たときは、その情報をそのまま使う（通信しない）
+  const hint = ui.hint && ui.hint.isbn === isbn ? ui.hint : null;
+  if (!hint) paint(pageBar('', '#/search') + `<section class="pad"><p class="loading" aria-live="polite">ISBN ${isbn} の本を探しています…</p></section>`);
+  let info = hint, failed = null;
+  if (!info) { try { info = await lookup(isbn); } catch (e) { failed = e; } }
   if (token !== ui.renderToken) return; // 探している間に別の画面へ移った
   if (!info) {
     const notice = navigator.onLine === false
       ? 'オフラインのため本の情報を取得できませんでした。タイトルなどを入力して追加できます。'
-      : 'この本の情報が見つかりませんでした。タイトルなどを入力して追加できます。';
-    paint(pageBar('', '#/search') + `<section class="pad"><p class="notice">${esc(notice)}</p>${manualFormHtml({})}</section>`);
+      : failed
+        ? `本の情報を取得できませんでした${failed.status === 429 ? '（検索が混み合っています）' : ''}。少し待ってからもう一度探すか、タイトルなどを入力して追加できます。`
+        : 'この本の情報が見つかりませんでした。発売されたばかりの本は、国立国会図書館のデータに載るまで時間がかかることがあります。タイトルなどを入力して追加できます。';
+    paint(pageBar('', '#/search') + `<section class="pad"><p class="notice">${esc(notice)}</p>
+      ${failed ? '<button type="button" class="btn block" id="retry" style="margin:0 0 8px">もう一度探す</button>' : ''}${manualFormHtml({})}</section>`);
+    const retry = document.getElementById('retry');
+    if (retry) retry.onclick = () => route();
     wireManualForm({ isbn });
     return;
   }
-  const d = { isbn, ...info };
+  const d = { ...info, isbn };
+  const sub = [d.publisher, pubLabel(d.pubdate) && pubLabel(d.pubdate) + '発売', d.totalPages && d.totalPages + 'ページ'].filter(Boolean).join('・');
   paint(pageBar('', '#/search') + `<section class="confirm">
     ${coverHtml(d, 'lg')}
     <p class="ctitle">${esc(d.title)}</p>
     ${d.author ? `<p class="cauthor">${esc(d.author)}</p>` : ''}
+    ${sub ? `<p class="cauthor">${esc(sub)}</p>` : ''}
     <p class="cq">この本でよろしいですか？</p>
     <div class="cbtns"><button type="button" class="btn" id="cCancel">キャンセル</button><button type="button" class="btn primary" id="cOk">OK</button></div>
+    <p class="help" style="margin-top:20px">出典：国立国会図書館サーチ（CC BY 4.0）</p>
   </section>`);
   document.getElementById('cCancel').onclick = () => goBack('#/search');
   document.getElementById('cOk').onclick = () => renderStatusStep(d);
@@ -1125,13 +1584,17 @@ function addBook(d, status) {
   const now = Date.now();
   const b = {
     id: uid(), isbn: d.isbn || '', title: d.title, author: d.author || '', publisher: d.publisher || '',
-    cover: safeUrl(d.cover), totalPages: toPosInt(d.totalPages), status,
+    cover: '', totalPages: toPosInt(d.totalPages), status,
     colorIdx: pickColor(colorCounts()),
-    createdAt: now, updatedAt: now, finishedAt: status === 'done' ? now : null, logs: [],
+    pubdate: d.pubdate || '', titleKana: d.titleKana || '', authorKana: d.authorKana || '',
+    favorite: false, rating: 0, tags: [],
+    createdAt: now, updatedAt: now, finishedAt: status === 'done' ? now : null,
+    wantAt: status === 'want' ? now : null, metaAt: d.isbn ? now : null, logs: [],
   };
   state.books.push(b);
   if (!save()) return;
   ui.tab = status;
+  ui.tagFilter = null; // 追加した本が絞り込みで隠れないようにする
   toast(`「${STATUS[status]}」に追加しました`);
   backTo('#/');
 }
@@ -1162,7 +1625,7 @@ function dayPanelHtml(ds, pickBook, dm, emptyText) {
   const items = [...m.entries()].map(([id, p]) => ({ b: state.books.find(x => x.id === id), p })).filter(x => x.b).sort((a, b) => b.p - a.p);
   const total = items.reduce((s, x) => s + x.p, 0);
   return `<div class="daypanel" aria-live="polite"><p class="dayhead">${fmtLong(ds)}<span>合計${total}ページ</span></p>
-    <ul class="daylist">${items.map(x => `<li class="${x.b.id === pickBook ? 'hl' : ''}"><i class="sw" style="background:${colorOf(x.b)}"></i><span class="bt">${esc(x.b.title)}</span><span class="pg">${x.p}ページ</span></li>`).join('')}</ul></div>`;
+    <ul class="daylist">${items.map(x => `<li class="${x.b.id === pickBook ? 'hl' : ''}"><i class="sw" style="background:${colorOf(x.b)}"></i>${coverHtml(x.b, 'xxs')}<span class="bt">${esc(x.b.title)}</span><span class="pg">${x.p}ページ</span></li>`).join('')}</ul></div>`;
 }
 function weekLabel(ws) {
   const we = addDays(ws, 6);
@@ -1180,7 +1643,7 @@ function barHtml(dm) {
     return { d, ds, segs, total: segs.reduce((s, x) => s + x.p, 0) };
   });
   const weekTotal = cols.reduce((s, c) => s + c.total, 0);
-  const W = 320, H = 250, L = 34, R = 6, T = 22, B = 46;
+  const W = 320, H = 330, L = 34, R = 6, T = 22, B = 46;
   const cw = (W - L - R) / 7, bw = Math.min(26, cw * 0.58), ph = H - T - B;
   const { max, step } = niceScale(Math.max(0, ...cols.map(c => c.total)));
   const y = v => T + ph - (v / max) * ph;
@@ -1244,16 +1707,33 @@ function calHtml(dm) {
   <div class="cal">
     <div class="calhead">
       <button type="button" class="arrow" id="mPrev" aria-label="前の月">${ICON.prev}</button>
-      <p>${yy}年${mm}月</p>
+      <button type="button" class="ymbtn" id="ymBtn" aria-expanded="${ui.ymOpen}" aria-controls="ymPanel" aria-label="${yy}年${mm}月（タップで年と月を選ぶ）">${yy}年${mm}月${ICON.down}</button>
       <button type="button" class="arrow" id="mNext" aria-label="次の月" ${isCurrent ? 'disabled' : ''}>${ICON.next}</button>
     </div>
+    ${ui.ymOpen ? ymPanelHtml(yy, mm) : ''}
     <div class="calgrid">${cells}</div>
     <p class="msum">${readDays ? `${mm}月は<b>${readDays}</b>日読んで、合計<b>${total}</b>ページ` : `${mm}月の記録はまだありません`}</p>
   </div>
   ${dayPanelHtml(ui.calPick, null, dm, '日付をタップすると、その日に読んだ本がわかります。')}`;
 }
-function renderStats() {
-  ui.page = 'stats';
+// 年月を選ぶパネル（カレンダーの「2026年9月」を押すと下に開く）
+function ymPanelHtml(selY, selM) {
+  const today = localDate(), cy = Number(today.slice(0, 4)), cm = Number(today.slice(5, 7));
+  const y = ui.ymYear;
+  return `<div class="ympanel" id="ymPanel">
+    <div class="ymyear">
+      <button type="button" class="arrow" id="yPrev" aria-label="前の年">${ICON.prev}</button>
+      <p aria-live="polite">${y}年</p>
+      <button type="button" class="arrow" id="yNext" aria-label="次の年" ${y >= cy ? 'disabled' : ''}>${ICON.next}</button>
+    </div>
+    <div class="ymgrid">${[...Array(12)].map((_, i) => {
+      const m = i + 1, future = y > cy || (y === cy && m > cm);
+      return `<button type="button" data-ym="${y}-${pad2(m)}" ${y === selY && m === selM ? 'aria-current="true"' : ''} ${future ? 'disabled' : ''}>${m}月</button>`;
+    }).join('')}</div>
+  </div>`;
+}
+function renderCal() {
+  ui.page = 'cal';
   if (!ui.weekStart) ui.weekStart = localDate(startOfWeek(new Date()));
   if (!ui.month) ui.month = localDate().slice(0, 7);
   const dm = buildDayMap();
@@ -1262,53 +1742,282 @@ function renderStats() {
   <div class="viewseg" role="tablist" aria-label="表示の切り替え">
     <button type="button" role="tab" aria-selected="${v === 'bar'}" data-view="bar">${ICON.bars}<span>グラフ</span></button>
     <button type="button" role="tab" aria-selected="${v === 'cal'}" data-view="cal">${ICON.cal}<span>カレンダー</span></button>
-  </div>` + (v === 'bar' ? barHtml(dm) : calHtml(dm)) + navHtml('stats'));
-  app.querySelectorAll('[data-view]').forEach(el => el.onclick = () => { ui.statsView = el.dataset.view; renderStats(); });
+  </div>` + (v === 'bar' ? barHtml(dm) : calHtml(dm)) + navHtml('cal'));
+  app.querySelectorAll('[data-view]').forEach(el => el.onclick = () => { ui.statsView = el.dataset.view; ui.ymOpen = false; renderCal(); });
   if (v === 'bar') {
-    document.getElementById('wPrev').onclick = () => { ui.weekStart = localDate(addDays(parseLocal(ui.weekStart), -7)); ui.barPick = null; renderStats(); };
-    document.getElementById('wNext').onclick = () => { ui.weekStart = localDate(addDays(parseLocal(ui.weekStart), 7)); ui.barPick = null; renderStats(); };
+    document.getElementById('wPrev').onclick = () => { ui.weekStart = localDate(addDays(parseLocal(ui.weekStart), -7)); ui.barPick = null; renderCal(); };
+    document.getElementById('wNext').onclick = () => { ui.weekStart = localDate(addDays(parseLocal(ui.weekStart), 7)); ui.barPick = null; renderCal(); };
     app.querySelectorAll('.chart [data-day]').forEach(el => el.addEventListener('click', e => {
       e.stopPropagation();
       const day = el.dataset.day, book = el.dataset.book || null;
       const p = ui.barPick;
       ui.barPick = (p && p.day === day && p.book === book) ? null : { day, book };
-      renderStats();
+      renderCal();
     }));
   } else {
-    const shift = n => { const d = parseLocal(ui.month + '-01'); d.setMonth(d.getMonth() + n); ui.month = localDate(d).slice(0, 7); ui.calPick = null; renderStats(); };
+    const shift = n => { const d = parseLocal(ui.month + '-01'); d.setMonth(d.getMonth() + n); ui.month = localDate(d).slice(0, 7); ui.calPick = null; ui.ymOpen = false; renderCal(); };
     document.getElementById('mPrev').onclick = () => shift(-1);
     document.getElementById('mNext').onclick = () => shift(1);
+    document.getElementById('ymBtn').onclick = () => {
+      ui.ymOpen = !ui.ymOpen;
+      ui.ymYear = Number(ui.month.slice(0, 4));
+      renderCal();
+      document.getElementById('ymBtn').focus();
+    };
+    if (ui.ymOpen) {
+      const year = n => { ui.ymYear += n; renderCal(); document.getElementById(n < 0 ? 'yPrev' : 'yNext').focus(); };
+      document.getElementById('yPrev').onclick = () => year(-1);
+      document.getElementById('yNext').onclick = () => year(1);
+      app.querySelectorAll('[data-ym]').forEach(el => el.onclick = () => {
+        ui.month = el.dataset.ym; ui.calPick = null; ui.ymOpen = false;
+        renderCal();
+        document.getElementById('ymBtn').focus();
+      });
+    }
     app.querySelectorAll('[data-cday]').forEach(el => el.onclick = () => {
       ui.calPick = ui.calPick === el.dataset.cday ? null : el.dataset.cday;
-      renderStats();
+      renderCal();
     });
   }
 }
 
-/* ========== データの書き出し・読み込み ========== */
-function renderData() {
-  ui.page = 'data';
+/* ========== 統計（年間・月間・通算） ========== */
+// 月ごと・日ごと・年ごとの読んだページ数の棒グラフ
+function colChart({ labels, tips, values, showLabel, cur, drill, aria }) {
+  const W = 320, H = 200, L = 34, R = 6, T = 18, B = 24;
+  const n = values.length, cw = (W - L - R) / n, bw = Math.max(3, Math.min(24, cw * 0.62)), ph = H - T - B;
+  const { max, step } = niceScale(Math.max(0, ...values));
+  const y = v => T + ph - (v / max) * ph;
+  const short = v => (v >= 1000 ? (Math.round(v / 100) / 10) + 'k' : String(v));
+  let g = '';
+  for (let v = 0; v <= max; v += step) {
+    const yy = y(v).toFixed(1);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" class="grid${v === 0 ? ' base' : ''}"/><text x="${L - 6}" y="${(+yy + 4).toFixed(1)}" text-anchor="end">${v}</text>`;
+  }
+  values.forEach((v, i) => {
+    const cx = L + cw * i + cw / 2;
+    if (drill) g += `<rect class="hit" data-drill="${i}" x="${(L + cw * i).toFixed(1)}" y="${T}" width="${cw.toFixed(1)}" height="${ph + B}"><title>${esc((tips || labels)[i])}：${v}ページ</title></rect>`;
+    if (v) g += `<rect class="colb" x="${(cx - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(T + ph - y(v)).toFixed(1)}" rx="2" ${drill ? `data-drill="${i}"` : ''}/>`;
+    if (v && n <= 12) g += `<text class="vl" x="${cx.toFixed(1)}" y="${(y(v) - 5).toFixed(1)}" text-anchor="middle">${short(v)}</text>`;
+    if (showLabel(i)) g += `<text class="${i === cur ? 'now' : ''}" x="${cx.toFixed(1)}" y="${H - 7}" text-anchor="middle">${esc(labels[i])}</text>`;
+  });
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(aria)}">${g}</svg></div>`;
+}
+function earliestDate() {
+  let e = '';
+  const take = ds => { if (ds && (!e || ds < e)) e = ds; };
+  state.books.forEach(b => {
+    take(tsDate(b.createdAt));
+    if (b.wantAt) take(tsDate(b.wantAt));
+    if (b.finishedAt) take(tsDate(b.finishedAt));
+    b.logs.forEach(l => take(l.date));
+  });
+  return e;
+}
+function coverGridHtml(key, title, books, sub) {
+  const limit = 12, open = ui.statAll[key];
+  const shown = open ? books : books.slice(0, limit);
+  return `<div class="sechead"><h2>${title}</h2><span>${books.length}冊</span></div>` + (books.length
+    ? `<ul class="covergrid">${shown.map(b => `<li><button type="button" class="cg" data-sbook="${esc(b.id)}" aria-label="「${esc(b.title)}」の情報">${coverHtml(b, 'fill')}<span class="cgt">${esc(b.title)}</span><span class="cgd">${sub(b)}</span></button></li>`).join('')}</ul>
+      ${books.length > limit ? `<button type="button" class="btn morebtn" data-more="${key}">${open ? '閉じる' : `すべて表示（${books.length}冊）`}</button>` : ''}`
+    : `<p class="none">この期間にはありません。</p>`);
+}
+function renderStats() {
+  ui.page = 'stats';
+  const today = localDate(), curY = Number(today.slice(0, 4)), curYM = today.slice(0, 7);
+  if (!ui.statYear) ui.statYear = curY;
+  if (!ui.statMonth) ui.statMonth = curYM;
+  const p = ui.statPeriod;
+  const plabel = PERIODS.find(([k]) => k === p)[1];
+  const first = earliestDate() || today;
+  let from, to, title, canPrev, canNext, unit;
+  if (p === 'year') {
+    from = `${ui.statYear}-01-01`; to = `${ui.statYear}-12-31`; title = `${ui.statYear}年`; unit = '年';
+    canPrev = ui.statYear > Number(first.slice(0, 4)); canNext = ui.statYear < curY;
+  } else if (p === 'month') {
+    const [y, m] = ui.statMonth.split('-').map(Number);
+    from = `${ui.statMonth}-01`; to = `${ui.statMonth}-31`; title = `${y}年${m}月`; unit = '月';
+    canPrev = ui.statMonth > first.slice(0, 7); canNext = ui.statMonth < curYM;
+  } else {
+    from = '0000-00-00'; to = '9999-99-99';
+    title = state.books.length ? `${fmtLong(first).replace(/（.）$/, '')}から今日まで` : 'まだ記録がありません';
+  }
+  const inR = ds => ds >= from && ds <= to;
+  const wantBooks = state.books.filter(b => b.wantAt && inR(tsDate(b.wantAt))).sort((a, b) => b.wantAt - a.wantAt);
+  const doneBooks = state.books.filter(b => b.status === 'done' && b.finishedAt && inR(tsDate(b.finishedAt))).sort((a, b) => b.finishedAt - a.finishedAt);
+  const logs = [];
+  state.books.forEach(b => b.logs.forEach(l => { if (l.pages && inR(l.date)) logs.push(l); }));
+  const pages = logs.reduce((s, l) => s + l.pages, 0);
+  const days = new Set(logs.map(l => l.date)).size;
+
+  // グラフ：年間は月ごと、月間は日ごと、通算は年ごと。棒をタップすると、その月・その年に切り替わる
+  let chart;
+  if (p === 'year') {
+    const values = Array(12).fill(0);
+    logs.forEach(l => { values[Number(l.date.slice(5, 7)) - 1] += l.pages; });
+    chart = { head: '月ごとの読んだページ数', values, labels: values.map((_, i) => String(i + 1)), tips: values.map((_, i) => `${i + 1}月`),
+      showLabel: () => true, cur: ui.statYear === curY ? Number(today.slice(5, 7)) - 1 : -1,
+      drill: i => { ui.statPeriod = 'month'; ui.statMonth = `${ui.statYear}-${pad2(i + 1)}`; } };
+  } else if (p === 'month') {
+    const [y, m] = ui.statMonth.split('-').map(Number);
+    const values = Array(new Date(y, m, 0).getDate()).fill(0);
+    logs.forEach(l => { values[Number(l.date.slice(8, 10)) - 1] += l.pages; });
+    chart = { head: '日ごとの読んだページ数', values, labels: values.map((_, i) => String(i + 1)),
+      showLabel: i => i === 0 || (i + 1) % 5 === 0, cur: ui.statMonth === curYM ? Number(today.slice(8, 10)) - 1 : -1, drill: null };
+  } else {
+    const y0 = Math.min(Number(first.slice(0, 4)), curY);
+    const values = Array(curY - y0 + 1).fill(0);
+    logs.forEach(l => { values[Number(l.date.slice(0, 4)) - y0] += l.pages; });
+    chart = { head: '年ごとの読んだページ数', values, labels: values.map((_, i) => String(y0 + i)), tips: values.map((_, i) => `${y0 + i}年`), showLabel: () => true,
+      cur: values.length - 1, drill: i => { ui.statPeriod = 'year'; ui.statYear = y0 + i; } };
+  }
+  const avg = days ? Math.round(pages / days) : 0;
+  paint(`<header class="pagehead split"><h1>統計</h1>
+    <button type="button" class="periodbtn" id="periodBtn" aria-haspopup="menu" aria-label="期間を切り替える（いまは${plabel}）">${plabel}${ICON.down}</button></header>
+  <div class="periodnav">${p === 'all'
+    ? `<span></span><p>${title}</p><span></span>`
+    : `<button type="button" class="arrow" id="pPrev" aria-label="前の${unit}" ${canPrev ? '' : 'disabled'}>${ICON.prev}</button>
+       <p aria-live="polite">${title}</p>
+       <button type="button" class="arrow" id="pNext" aria-label="次の${unit}" ${canNext ? '' : 'disabled'}>${ICON.next}</button>`}</div>
+  <div class="tiles">
+    <div class="tile"><span class="tl">読みたいに追加</span><span class="tv">${wantBooks.length}<small>冊</small></span></div>
+    <div class="tile"><span class="tl">読了</span><span class="tv">${doneBooks.length}<small>冊</small></span></div>
+    <div class="tile wide"><span class="tl">読んだページ数</span><span class="tv">${pages.toLocaleString('ja-JP')}<small>ページ</small></span>
+      <span class="ts">${days ? `${days}日読みました（読んだ日は平均${avg}ページ）` : 'この期間の記録はまだありません'}</span></div>
+  </div>
+  <div class="sechead"><h2>${chart.head}</h2>${chart.drill ? '<span>棒をタップで詳しく</span>' : ''}</div>
+  <div class="chartbox">${colChart({ ...chart, aria: `${title}の${chart.head}` })}</div>
+  ${coverGridHtml('done', '読了した本', doneBooks, b => fmtMD(tsDate(b.finishedAt)) + ' 読了')}
+  ${coverGridHtml('want', '読みたいに追加した本', wantBooks, b => fmtMD(tsDate(b.wantAt)) + ' 追加')}` + navHtml('stats'));
+
+  const periodBtn = document.getElementById('periodBtn');
+  periodBtn.onclick = async () => {
+    const k = await openMenu(periodBtn, '期間', PERIODS, ui.statPeriod);
+    if (k && k !== ui.statPeriod) {
+      // 見ていた年・月を引き継いで切り替える
+      if (k === 'month' && ui.statPeriod === 'year') ui.statMonth = ui.statYear === curY ? curYM : `${ui.statYear}-12`;
+      if (k === 'year' && ui.statPeriod === 'month') ui.statYear = Number(ui.statMonth.slice(0, 4));
+      ui.statPeriod = k; ui.statAll = {};
+    }
+    if (ui.page === 'stats') { renderStats(); document.getElementById('periodBtn').focus(); }
+  };
+  const shift = n => {
+    if (p === 'year') ui.statYear += n;
+    else { const d = parseLocal(ui.statMonth + '-01'); d.setMonth(d.getMonth() + n); ui.statMonth = localDate(d).slice(0, 7); }
+    ui.statAll = {};
+    renderStats();
+    const btn = document.getElementById(n < 0 ? 'pPrev' : 'pNext');
+    if (btn && !btn.disabled) btn.focus();
+  };
+  const prev = document.getElementById('pPrev'), next = document.getElementById('pNext');
+  if (prev) prev.onclick = () => shift(-1);
+  if (next) next.onclick = () => shift(1);
+  if (chart.drill) app.querySelectorAll('[data-drill]').forEach(el => el.addEventListener('click', () => {
+    chart.drill(Number(el.dataset.drill));
+    ui.statAll = {};
+    window.scrollTo(0, 0);
+    renderStats();
+  }));
+  app.querySelectorAll('[data-sbook]').forEach(el => el.onclick = () => {
+    const b = state.books.find(x => x.id === el.dataset.sbook);
+    if (b) openInfo(b);
+  });
+  app.querySelectorAll('[data-more]').forEach(el => el.onclick = () => {
+    ui.statAll[el.dataset.more] = !ui.statAll[el.dataset.more];
+    renderStats();
+  });
+}
+
+/* ========== 設定（バックアップ・タグの管理） ========== */
+function backupFile() {
+  return new File([JSON.stringify(state, null, 2)], `dokusho-note-${localDate()}.json`, { type: 'application/json' });
+}
+function markExported() {
+  state.settings.lastExport = Date.now();
+  save();
+  if (ui.page === 'settings') renderSettings();
+}
+function renameTag(old) {
+  openModal((m, ctx) => {
+    m.innerHTML = `<p class="mtitle" id="mTitle">タグ「${esc(old)}」の名前を変える</p>
+      <form id="rnForm" novalidate>
+        <label class="field"><span>新しい名前</span><input name="t" value="${esc(old)}" maxlength="30" autocomplete="off"></label>
+        <p class="err" id="rnErr" role="alert"></p>
+        <div class="mbtns"><button type="button" class="btn" id="mCancel">キャンセル</button><button class="btn primary">変更する</button></div>
+      </form>`;
+    const form = m.querySelector('#rnForm');
+    m.querySelector('#mCancel').onclick = () => popLayer();
+    onSubmit(form, () => {
+      const t = form.elements.t.value.trim().slice(0, 30);
+      if (!t) { m.querySelector('#rnErr').textContent = '名前を入力してください。'; form.elements.t.focus(); return; }
+      if (t !== old) {
+        // 同じ名前のタグがすでにある本は、ひとつにまとめる
+        state.books.forEach(b => {
+          const i = b.tags.indexOf(old);
+          if (i < 0) return;
+          if (b.tags.includes(t)) b.tags.splice(i, 1); else b.tags[i] = t;
+        });
+        if (ui.tagFilter === old) ui.tagFilter = t;
+        if (!save()) return;
+        ctx.changed = true;
+        toast(`タグを「${t}」に変えました`);
+      }
+      popLayer();
+    });
+    setTimeout(() => { form.elements.t.focus(); form.elements.t.select(); }, 50);
+  });
+}
+function renderSettings() {
+  ui.page = 'settings';
   const nb = state.books.length;
   const nl = state.books.reduce((s, b) => s + b.logs.length, 0);
-  paint(pageBar('データ') + `
-  <section class="pad prose">
-    <h1 class="h1">データの書き出しと読み込み</h1>
-    <p>記録はこのブラウザの中だけに保存されています。ブラウザのデータを消したり、スマホを買い替えたりすると記録も消えるので、ときどきファイルに書き出しておいてください。</p>
-    <p class="help">いまのデータ：本${nb}冊、記録${nl}件</p>
-    <button type="button" class="btn primary block" id="exportBtn">ファイルに書き出す</button>
+  const tags = allTags();
+  const le = state.settings.lastExport;
+  let canShare = false;
+  try { canShare = !!(navigator.canShare && navigator.canShare({ files: [backupFile()] })); } catch {}
+  paint(`<header class="pagehead"><h1>設定</h1></header>
+  <h2 class="sech">バックアップ</h2>
+  <section class="card prose">
+    <p>記録はこの端末のブラウザの中だけに保存されています。ブラウザのデータを消したり、スマホを買い替えたりすると記録も消えるので、ときどきファイルに書き出しておいてください。</p>
+    <p class="help">いまのデータ：本${nb}冊、記録${nl}件<br>最後に書き出した日：${le ? fmtLong(tsDate(le)) : 'まだ書き出していません'}</p>
+    <button type="button" class="btn primary block" id="exportBtn">${ICON.download}ファイルに書き出す</button>
+    ${canShare ? `<button type="button" class="btn block" id="shareBtn">${ICON.upload}ほかのアプリに保存する</button>` : ''}
     <label class="btn block filebtn">ファイルから読み込む<input type="file" id="importFile" accept="application/json,.json" hidden></label>
-    <p class="help">読み込むと、いまのデータはファイルの内容に置き換わります。</p>
-  </section>`);
+    <p class="help">${canShare ? '「ほかのアプリに保存する」では、iCloud Drive や Google ドライブなどに保存できます。' : ''}読み込むと、いまのデータはファイルの内容に置き換わります。</p>
+  </section>
+  <h2 class="sech">タグ</h2>
+  <section class="card">
+    ${tags.length ? `<ul class="taglist">${tags.map(([t, n]) => `<li><span class="tn">${esc(t)}</span><span class="tc">${n}冊</span>
+      <button type="button" class="minibtn" data-rename="${esc(t)}">名前を変更</button><button type="button" class="minibtn danger" data-deltag="${esc(t)}">削除</button></li>`).join('')}</ul>`
+      : '<p class="help" style="margin:0">まだタグはありません。ホームで本の右にある ⓘ を開くと、タグを付けられます。</p>'}
+  </section>
+  <h2 class="sech">このアプリについて</h2>
+  <section class="card prose">
+    <p class="help" style="margin:0"><b>本の情報の出典</b><br>このアプリで検索・表示する本の情報（書誌データ）は、<a href="https://ndlsearch.ndl.go.jp/" target="_blank" rel="noopener">国立国会図書館サーチ</a>のAPIから取得した、国立国会図書館の「国立国会図書館蔵書」「国立国会図書館新着書誌情報」に由来します。ライセンスは<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">クリエイティブ・コモンズ 表示 4.0 国際 パブリック・ライセンス（CC BY 4.0）</a>です。</p>
+    <p class="help">見やすくするため、タイトルや著者名の書き方を一部変えています（例：「村上, 春樹, 1949-」→「村上春樹」、「書名. 巻名」→「書名 巻名」）。</p>
+    <p class="help">表紙は画像を使わず、本ごとの色にタイトルを書いたものを表示しています。</p>
+  </section>` + navHtml('settings'));
+
   document.getElementById('exportBtn').onclick = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = URL.createObjectURL(backupFile());
     a.download = `dokusho-note-${localDate()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast('書き出しました');
+    markExported();
+  };
+  const shareBtn = document.getElementById('shareBtn');
+  if (shareBtn) shareBtn.onclick = async () => {
+    try {
+      await navigator.share({ files: [backupFile()], title: '読書ノートのバックアップ' });
+      toast('保存しました');
+      markExported();
+    } catch (e) {
+      if (!e || e.name !== 'AbortError') toast('保存できませんでした。「ファイルに書き出す」をお試しください');
+    }
   };
   document.getElementById('importFile').onchange = async e => {
     const file = e.target.files[0];
@@ -1318,13 +2027,23 @@ function renderData() {
       if (await askConfirm(`いまのデータ（本${nb}冊）を、ファイルの内容（本${d.books.length}冊）に置き換えますか？`, '置き換える', true)) {
         state = d;
         ensureColors();
-        if (save()) { toast('読み込みました'); renderData(); }
+        ui.tagFilter = null;
+        if (save()) { toast('読み込みました'); renderSettings(); backfillStarted = false; backfillMeta(); }
       }
     } catch {
       toast('読み込めませんでした。このアプリで書き出したファイルか確認してください');
     }
     e.target.value = '';
   };
+  app.querySelectorAll('[data-rename]').forEach(el => el.onclick = () => renameTag(el.dataset.rename));
+  app.querySelectorAll('[data-deltag]').forEach(el => el.onclick = async () => {
+    const t = el.dataset.deltag;
+    const n = state.books.filter(b => b.tags.includes(t)).length;
+    if (!(await askConfirm(`タグ「${t}」を削除しますか？（${n}冊の本からこのタグが外れます。本は削除されません）`, '削除する', true))) return;
+    state.books.forEach(b => { b.tags = b.tags.filter(x => x !== t); });
+    if (ui.tagFilter === t) ui.tagFilter = null;
+    if (save()) { toast(`タグ「${t}」を削除しました`); renderSettings(); }
+  });
 }
 
 /* ========== 起動 ========== */
@@ -1341,6 +2060,7 @@ histCall('replaceState', { d: curDepth(), h: ui.hash }, ui.hash);
 save();
 try { route(); }
 catch (e) { app.innerHTML = `<section class="pad"><p class="h1">起動できませんでした</p><p class="help">${esc(e && e.message)}</p></section>`; }
+setTimeout(() => backfillMeta().catch(() => {}), 1500);
 </script>
 </body>
 </html>
